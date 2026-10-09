@@ -15,7 +15,6 @@ export const LIVE: NavItem = { href: "/live", label: "Live investigation", icon:
 export const PRIMARY: NavItem[] = [
   HOME,
   INVESTIGATIONS,
-  LIVE,
 ];
 
 export const SECONDARY: NavItem[] = [
