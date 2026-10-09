@@ -1,10 +1,22 @@
 # Diablo AI
 
-A research environment for investigating, testing and understanding AI systems: an AI system and a question become hypotheses, experiments, runs, evidence, analysis and a conclusion you can check.
+**Diablo AI lets companies understand what is actually happening inside their AI systems: not just *that* a score moved, but *which change* moved it, and how sure they can be.**
+
+Live demo: **https://diablo.pnoia.dev** (click "Enter demo workspace"; no account needed) · Submission: [`docs/SUBMISSION.md`](docs/SUBMISSION.md) · Stage pitch: [`docs/PITCH.md`](docs/PITCH.md) · Self-assessment: [`docs/SCORECARD.md`](docs/SCORECARD.md)
+
+A question such as "why did it get worse?" becomes competing hypotheses, controlled experiments, evidence and a verdict, with an effect size, a 95% confidence interval, an exact test and a validity grade, traceable to raw outputs. **The AI reasons. The system measures.** The reasoning agent proposes (a rule-based stand-in in this demo); every number is computed from stored counts by `src/lib/stats.ts`.
+
+Proof you can rerun (`npm test`, pinned in `src/lib/submission-claims.test.ts`), on an illustrative example rather than customer data: of two changes shipped together, a new system prompt cost **−15.0 pp** (95% CI −26.3 to −3.8, exact McNemar p = 0.012), while a temperature change showed no clear effect (−1.3 pp, CI −8.8 to +6.3). Revert the prompt and keep the temperature change.
+
+| Works today | Next |
+| --- | --- |
+| Full investigation loop in the browser on demo data; real statistics engine (Wilson, Newcombe, z, Fisher, exact McNemar, paired bootstrap, Holm); validity rubric C1–C9; 51 unit tests and 26 end-to-end tests pass | A real reasoning model (GLM-5.3 planned) and a connector to a customer's AI system behind the existing `DataProvider` interface; in progress: Python engine with a Gemini provider, Google sign-in |
+
+For every company that integrates AI, from telecoms to startups to frontier labs. These are target segments, not customers.
+
+### About this repository
 
 This repository is the clickable demo. All data is illustrative and lives in your browser; every run is simulated by a seeded mock provider, and every number on screen is derived from stored counts.
-
-Live: https://diablo.pnoia.dev
 
 ## Run it
 
