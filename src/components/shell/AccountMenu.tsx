@@ -6,7 +6,7 @@ import { useLayoutEffect, useState } from "react";
 import { FileText, Keyboard, LifeBuoy, LogOut, Settings } from "lucide-react";
 import { Menu, MenuContent, MenuItem, MenuLabel, MenuSeparator, MenuTrigger } from "@/components/ui/Menu";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { auth, useSession } from "@/lib/auth";
+import { signOut, useSession } from "@/components/auth/SessionProvider";
 import { BRAND, isPlaceholder } from "@/lib/brand";
 import { cn } from "@/lib/cn";
 import { provider } from "@/lib/data";
@@ -23,10 +23,14 @@ const THEMES: { value: ThemePref; label: string }[] = [
 export function AccountMenu({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const session = useSession();
   const router = useRouter();
+  const [leaving, setLeaving] = useState(false);
   const theme = useThemePref();
   const [open, setOpen] = useState(false);
   // A transient menu must not reappear open when a hidden route comes back (Activity).
   useLayoutEffect(() => () => setOpen(false), []);
+
+  if (!session) return <AccountMenuSkeleton collapsed={collapsed} />;
+  const detail = session.demo ? "Demo" : (session.user.email ?? session.workspace);
 
   const go = (href: string) => {
     onNavigate?.();
@@ -41,7 +45,7 @@ export function AccountMenu({ collapsed, onNavigate }: { collapsed: boolean; onN
           "flex w-full items-center gap-2.5 rounded-[6px] p-1.5 text-left transition-colors duration-150 hover:bg-sunken/70 data-[state=open]:bg-sunken",
           collapsed && "justify-center",
         )}
-        aria-label={`Account: ${session.user.name}, ${session.workspace}`}
+        aria-label={`Account: ${session.user.name}, ${detail}`}
       >
         <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-sunken text-[12px] font-medium text-ink-2">
           {session.user.initials}
@@ -49,8 +53,8 @@ export function AccountMenu({ collapsed, onNavigate }: { collapsed: boolean; onN
         <span className="sb-expanded min-w-0 flex-1 leading-tight">
           <span className="block truncate text-[14px] text-ink">{session.user.name}</span>
           <span className="block truncate text-[12px] text-ink-3">
-            {session.workspace}
-            {provider.kind === "mock" && <> · {provider.label}</>}
+            {detail}
+            {session.demo && provider.kind === "mock" && <> · {provider.label}</>}
           </span>
         </span>
       </button>
@@ -67,7 +71,10 @@ export function AccountMenu({ collapsed, onNavigate }: { collapsed: boolean; onN
         trigger
       )}
       <MenuContent side="top" align="start" className="w-[240px]" label="Account">
-        <MenuLabel>{session.workspace}</MenuLabel>
+        <MenuLabel>
+          <span className="block truncate text-ink">{session.user.name}</span>
+          <span className="block truncate">{session.demo ? "Demo session" : session.user.email}</span>
+        </MenuLabel>
         <MenuItem icon={<Settings strokeWidth={1.5} />} onSelect={() => go("/settings")}>
           Settings
         </MenuItem>
@@ -110,14 +117,29 @@ export function AccountMenu({ collapsed, onNavigate }: { collapsed: boolean; onN
         <MenuSeparator />
         <MenuItem
           icon={<LogOut strokeWidth={1.5} />}
-          onSelect={async () => {
-            await auth.signOut();
-            go("/");
+          disabled={leaving}
+          onSelect={() => {
+            setLeaving(true);
+            onNavigate?.();
+            void signOut();
           }}
         >
-          Exit demo
+          Sign out
         </MenuItem>
       </MenuContent>
     </Menu>
+  );
+}
+
+/** Same footprint as the trigger, shown while the session streams in. */
+export function AccountMenuSkeleton({ collapsed }: { collapsed: boolean }) {
+  return (
+    <div aria-hidden className={cn("flex w-full items-center gap-2.5 p-1.5", collapsed && "justify-center")}>
+      <span className="size-7 shrink-0 rounded-full bg-sunken" />
+      <span className="sb-expanded min-w-0 flex-1 space-y-1.5">
+        <span className="block h-3 w-24 rounded bg-sunken" />
+        <span className="block h-2.5 w-16 rounded bg-sunken" />
+      </span>
+    </div>
   );
 }
