@@ -157,7 +157,7 @@ export function SignIn({ googleEnabled }: { googleEnabled: boolean }) {
           {googleEnabled ? (
             <a
               href={googleHref}
-              className="mt-6 flex h-11 w-full items-center justify-center gap-3 rounded-[8px] bg-white text-[15px] font-medium text-ink shadow-[0_12px_32px_-12px_rgb(0_0_0/0.55)] transition-[background-color,box-shadow] duration-150 hover:shadow-[0_14px_36px_-12px_rgb(0_0_0/0.65)] focus-visible:outline-cream"
+              className="mt-6 flex h-11 w-full items-center justify-center gap-3 rounded-[8px] bg-white text-[15px] font-medium text-[#1f1f1f] shadow-[0_12px_32px_-12px_rgb(0_0_0/0.55)] transition-[background-color,box-shadow] duration-150 hover:shadow-[0_14px_36px_-12px_rgb(0_0_0/0.65)] focus-visible:outline-cream"
             >
               <GoogleG />
               Continue with Google
@@ -168,7 +168,7 @@ export function SignIn({ googleEnabled }: { googleEnabled: boolean }) {
                 type="button"
                 disabled
                 aria-describedby="google-unavailable"
-                className="mt-6 flex h-11 w-full cursor-not-allowed items-center justify-center gap-3 rounded-[8px] bg-white/70 text-[15px] font-medium text-ink/70"
+                className="mt-6 flex h-11 w-full cursor-not-allowed items-center justify-center gap-3 rounded-[8px] bg-white/70 text-[15px] font-medium text-[#1f1f1f]/70"
               >
                 <GoogleG />
                 Continue with Google
@@ -233,7 +233,10 @@ export function SignIn({ googleEnabled }: { googleEnabled: boolean }) {
   );
 }
 
-/** Google's standard multicolour "G" (brand guidelines: unaltered, on white). */
+/**
+ * Google's standard multicolour "G". Google's sign-in branding rules ask for
+ * it unaltered, on white, with #1F1F1F label text, whatever the app's theme.
+ */
 function GoogleG() {
   return (
     <svg aria-hidden width="18" height="18" viewBox="0 0 48 48" className="shrink-0">
