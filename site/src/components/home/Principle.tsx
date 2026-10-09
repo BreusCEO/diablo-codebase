@@ -39,15 +39,15 @@ const SNEAKY: Part[] = [
 ];
 
 const REASONS = ["Proposes hypotheses", "Designs experiments", "Explains what the results mean"];
-const MEASURES = ["Runs your AI system", "Scores every answer", "Computes the statistics", "Checks every number it is shown"];
+const MEASURES = ["Runs the experiments", "Scores every answer", "Computes the statistics", "Grades how far each result can be trusted"];
 
 export function Principle() {
   return (
     <section className="theme-dark bg-bg">
       <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
         <SectionHead eyebrow="The principle" title="The AI reasons. The system measures.">
-          The model proposes and explains. It can never make up a result: every number you read was measured by the system
-          and checked before it reached you.
+          The model proposes and explains. It never writes a number: every number you read is computed by code from the
+          recorded results.
         </SectionHead>
 
         <div className="mt-14 grid gap-4 md:grid-cols-2">
@@ -57,6 +57,10 @@ export function Principle() {
 
         <Reveal delay={0.08} className="mt-4">
           <Grounding />
+          <p className="t-caption mt-4 text-ink-3">
+            An illustration of the rule. In today’s demo a rule-based stand-in plays the model, and code writes every
+            sentence that carries a number.
+          </p>
         </Reveal>
       </div>
     </section>
@@ -196,8 +200,8 @@ function Grounding() {
               >
                 <p className="t-callout mt-6 flex gap-2 rounded-xl bg-accent-tint px-3.5 py-3 text-bad">
                   <span aria-hidden>✕</span>
-                  Rejected. “40%” isn’t in the fact table, so this conclusion is never published. Diablo falls back to a plain
-                  summary of what was measured.
+                  Not allowed. “40%” isn’t in the fact table, and a conclusion may only cite measured facts, so this sentence
+                  never reaches you.
                 </p>
               </motion.div>
             )}

@@ -16,14 +16,19 @@ const CAPABILITIES = ["Evaluation", "Observability", "Research dashboards", "Cod
 const PRINCIPLES = [
   { title: "The AI reasons. The system measures.", body: "The model proposes and explains. Code runs the experiments and computes every statistic." },
   { title: "Turn uncertainty into knowledge.", body: "Start from what is known and what isn’t, not from a fix." },
-  { title: "Every investigation leaves something behind.", body: "Causes, failure modes and counterexamples are kept, with their evidence." },
-  { title: "Every change can be undone.", body: "Explicit, testable, reversible and auditable. Always." },
+  { title: "Every investigation leaves a record.", body: "Hypotheses, experiments, verdicts, and the raw outputs behind them." },
+  { title: "Every change must be undoable.", body: "Any change Diablo makes will be explicit, tested, reversible and audited." },
 ];
 
 const ROADMAP = [
-  { when: "Now", title: "Investigations on demand", body: "You bring an AI system and a question. Diablo investigates and reports what it can prove." },
   {
-    when: "Next",
+    when: "Now",
+    title: "A working loop, on sample systems",
+    body: "In the demo workspace: hypotheses, experiments, simulated runs, real statistics and a report.",
+  },
+  { when: "Next", title: "Your own AI system", body: "A live reasoning model, and a connector that runs experiments on the AI you ship." },
+  {
+    when: "Then",
     title: "Autonomous discovery",
     body: "Diablo notices that something changed or looks unusual, investigates on its own and remembers what it found.",
   },
@@ -57,7 +62,7 @@ export default function AboutPage() {
       <section className="border-t bg-subtle">
         <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
           <SectionHead eyebrow="What Diablo is" title="Not another tool. A new category: AI evolution.">
-            Evaluation, observability, dashboards and coding are things Diablo uses. The product is the loop that turns them
+            Evaluation, observability, dashboards and coding agents are ingredients. The product is the loop that turns them
             into understanding, and understanding into improvement.
           </SectionHead>
           <Reveal delay={0.08} className="mt-12 flex flex-wrap items-center gap-3">

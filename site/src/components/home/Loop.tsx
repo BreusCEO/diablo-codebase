@@ -9,11 +9,11 @@ const STEPS = [
   { name: "Question", line: "You ask what you want to understand about your AI." },
   { name: "Hypotheses", line: "Diablo lists the possible causes, including competing ones." },
   { name: "Experiment", line: "It designs a controlled test that can tell them apart." },
-  { name: "Evidence", line: "The system runs your AI and records every result." },
+  { name: "Evidence", line: "The system runs the experiment and records every result." },
   { name: "Analysis", line: "Statistics are computed by code, never written by the model." },
   { name: "Conclusion", line: "A claim is only as strong as the evidence behind it." },
-  { name: "Knowledge", line: "What was learned is kept, with its evidence." },
-  { name: "Improvement", line: "A change is proposed, tested and verified. Then the loop runs again." },
+  { name: "Knowledge", line: "The conclusion links to its evidence, down to the raw outputs." },
+  { name: "Improvement", line: "The next experiment follows from the evidence. Then the loop runs again." },
 ];
 const N = STEPS.length;
 const STEP = 360 / N;

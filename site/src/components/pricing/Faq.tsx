@@ -7,20 +7,27 @@ import { UI } from "@/lib/motion";
 const QA = [
   {
     q: "Can the AI make up results?",
-    a: "No. The model only proposes and explains. Experiments are run and statistics are computed by code, and every number in a conclusion is checked against the measured facts before you see it.",
+    a: "No. The model proposes and explains; it never writes a number. Experiments are run, and every statistic is computed, by code from the recorded results.",
+  },
+  {
+    q: "Do I need an account?",
+    a: "No. Open the demo workspace without one, or continue with Google. The demo uses sample data and keeps nothing after you leave.",
+  },
+  {
+    q: "What can I connect?",
+    a: "Not yet. Today Diablo works on the sample systems in the demo, with simulated runs. Connecting your own model, agent or AI app over its API comes next.",
+  },
+  {
+    q: "Who pays for the model calls?",
+    a: "Nobody, for now: the demo’s runs are simulated. Once you connect your own system, experiments will call it with your keys, and your provider will bill those calls.",
   },
   {
     q: "What counts as an investigation?",
     a: "One question, with its hypotheses, experiments and conclusion. Re-running an experiment inside the same investigation doesn’t count again.",
   },
-  { q: "What can I connect?", a: "Anything you can call over an API: a model, an agent or a full AI application." },
   {
-    q: "Who pays for the model calls?",
-    a: "Experiments call your AI system with your own keys, so your provider bills those calls. Diablo shows the estimated cost before anything runs.",
-  },
-  {
-    q: "Can I undo a change Diablo suggests?",
-    a: "Yes. Every change is explicit, tested and reversible, with a record of why it was made and what it did.",
+    q: "Does Diablo change my AI system?",
+    a: "No. It reports what the evidence supports, and you decide what to change.",
   },
 ];
 

@@ -180,7 +180,7 @@ function QuestionBox() {
             <span key={i} className={`h-1 rounded-full transition-all duration-300 ${i === qi ? "w-4 bg-accent-text" : "w-1 bg-line-strong"}`} />
           ))}
         </span>
-        About any model, agent or AI app.
+        Questions Diablo is built to answer.
       </span>
     </button>
   );

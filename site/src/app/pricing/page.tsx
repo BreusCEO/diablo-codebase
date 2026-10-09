@@ -16,8 +16,8 @@ export default function PricingPage() {
   return (
     <>
       <PageHero eyebrow="Pricing" title="Free during early access.">
-        Here is what Diablo will cost afterwards. Experiments call your own AI system, so your provider bills the model
-        usage, and Diablo shows the estimate before anything runs.
+        Today Diablo runs on sample systems in a demo workspace, and it costs nothing. These are the plans we intend to
+        offer once you can connect your own AI.
       </PageHero>
 
       <section className="border-t">

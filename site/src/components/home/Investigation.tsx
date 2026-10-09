@@ -208,6 +208,9 @@ export function Investigation() {
 
           <Stages p={p} concluded={stage === LAST} />
         </div>
+        <p className="t-caption mt-4 text-ink-3">
+          An illustrative example, not customer data. Every statistic in it is computed by Diablo’s own code.
+        </p>
       </div>
     </section>
   );
@@ -294,7 +297,7 @@ function Stages({ p, concluded }: { p: MotionValue<number>; concluded: boolean }
             <svg viewBox="0 0 16 16" className="size-3.5" aria-hidden>
               <path d="M3 8.5 6.5 12 13 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Saved to knowledge
+            Report ready
           </p>
         </motion.div>
       </div>
