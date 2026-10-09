@@ -26,11 +26,13 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: `npx next start -p ${PORT}`,
+    // Demo mode is a build-time flag: the test server builds with it (production never does).
+    command: `npx next build && npx next start -p ${PORT}`,
     url: `http://localhost:${PORT}/`,
     reuseExistingServer: true,
-    timeout: 60_000,
+    timeout: 240_000,
     env: {
+      NEXT_PUBLIC_DEMO_MODE: "1",
       // A throwaway secret for the local test server only; production sets its own.
       AUTH_SECRET: process.env.AUTH_SECRET ?? "e2e-only-secret-never-used-in-production-000",
       // Google stays unconfigured in tests: no network, and the disabled state is covered.

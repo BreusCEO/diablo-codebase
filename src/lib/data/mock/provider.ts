@@ -20,6 +20,7 @@ import type { Experiment, Investigation, Run, SessionEvent } from "../types";
 import { designInvestigation } from "./agent";
 import { DATASETS, SYSTEMS } from "./catalog";
 import { seedInvestigations } from "./fixtures";
+import { DEMO_MODE } from "@/lib/demo-mode";
 import { simulateRun } from "./simulate";
 import { liveDataset } from "@/lib/live/dataset";
 import { HELPER_CATALOG } from "@/lib/live/registry";
@@ -69,7 +70,7 @@ function init(): WorkspaceSnapshot {
   } else {
     const now = Date.now();
     seededAt = new Date(now).toISOString();
-    investigations = seedInvestigations(now);
+    investigations = DEMO_MODE ? seedInvestigations(now) : [];
     if (res.kind === "reset") notice = RESET_MESSAGE[res.reason];
   }
   snap = { ready: true, investigations, notice, storage: s ? "ok" : "unavailable" };
@@ -443,7 +444,7 @@ export const mockProvider: DataProvider = {
     const now = Date.now();
     seededAt = new Date(now).toISOString();
     lastWritten = null;
-    snap = { ...getSnapshot(), investigations: seedInvestigations(now), notice: null };
+    snap = { ...getSnapshot(), investigations: DEMO_MODE ? seedInvestigations(now) : [], notice: null };
     emit();
     schedulePersist();
     scheduleRuns();

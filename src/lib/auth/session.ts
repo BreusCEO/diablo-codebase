@@ -1,4 +1,5 @@
 import { jwtVerify, SignJWT } from "jose";
+import { DEMO_MODE } from "@/lib/demo-mode";
 import { DEMO_USER, initialsOf, type AuthProvider, type Session } from "./types";
 
 /**
@@ -44,6 +45,7 @@ export async function verifySession(token: string | undefined | null, secret: st
     });
     const provider = payload.provider;
     if (provider !== "google" && provider !== "demo") return null;
+    if (provider === "demo" && !DEMO_MODE) return null;
     if (typeof payload.sub !== "string" || typeof payload.exp !== "number") return null;
     const name = typeof payload.name === "string" && payload.name.trim() ? payload.name.trim() : DEMO_USER.name;
     const email = typeof payload.email === "string" ? payload.email : null;

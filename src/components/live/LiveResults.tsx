@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useRef, useTransition } from "react";
 import { ArrowUpRight, CircleAlert, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ForestPlot } from "@/components/charts/Charts";
@@ -320,6 +320,13 @@ function Answers({ result }: { result: LiveResult }) {
 function OpenInWorkspace({ result }: { result: LiveResult }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // A finished run is saved to the investigations list at once, so it shows in the sidebar.
+  const saved = useRef<string | null>(null);
+  useEffect(() => {
+    if (saved.current === result.investigation.id) return;
+    saved.current = result.investigation.id;
+    provider.importInvestigation(result.investigation);
+  }, [result.investigation]);
   return (
     <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
       <Button
@@ -336,7 +343,7 @@ function OpenInWorkspace({ result }: { result: LiveResult }) {
       >
         Open in workspace
       </Button>
-      <span className="text-[13px] text-ink-3">Adds this run to the investigations in this tab: graph, evidence and report.</span>
+      <span className="text-[13px] text-ink-3">Saved to your investigations: graph, evidence and report.</span>
     </div>
   );
 }
