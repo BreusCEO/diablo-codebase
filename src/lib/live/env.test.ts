@@ -4,10 +4,10 @@ import { liveConfig, providerKey, publicConfig } from "./env";
 import { DEFAULT_MODELS } from "./providers";
 
 describe("live env: provider pick", () => {
-  it("is not configured without a key, and says why", () => {
+  it("is not configured without a key (not a misconfiguration, so no problem text)", () => {
     const c = liveConfig({});
     expect(c.provider).toBeNull();
-    expect(c.problem).toMatch(/GEMINI_API_KEY/);
+    expect(c.problem).toBeNull();
   });
 
   it("picks Gemini when its key exists, else Z.ai", () => {

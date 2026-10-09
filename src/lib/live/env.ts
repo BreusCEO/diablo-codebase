@@ -21,7 +21,7 @@ import type { AbuseLimits, LivePublicConfig, ProviderId } from "./types";
 
 export interface LiveConfig {
   provider: ProviderId | null;
-  /** Why no provider is configured, in words for the page. */
+  /** What is misconfigured (a key named by DIABLO_LLM is missing, an odd model id); null when simply no key is set. */
   problem: string | null;
   reasoningModel: string;
   targetModel: string;
@@ -78,7 +78,8 @@ function pickProvider(env: Env): { provider: ProviderId | null; problem: string 
   }
   if (has("gemini")) return { provider: "gemini", problem: null };
   if (has("zai")) return { provider: "zai", problem: null };
-  return { provider: null, problem: "No model key is set: add GEMINI_API_KEY (or ZAI_API_KEY) to the environment." };
+  // Simply no key: not a misconfiguration, so no problem to report beyond "not configured".
+  return { provider: null, problem: null };
 }
 
 function model(env: Env, name: string, fallback: string): string | { invalid: string } {

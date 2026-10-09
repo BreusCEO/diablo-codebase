@@ -20,6 +20,7 @@ export function interpretSystemPrompt(): string {
     "Rules (a checker enforces them; a reply that breaks one is discarded):",
     "1. Never write a number. No digits, no percent signs, no number words such as “half”, “twice” or “twenty”.",
     "2. Every measured value comes from the fact table: cite it as {{F1}}, {{F2}}, … exactly as listed. Code replaces each placeholder with its value.",
+    "   Values already carry their own labels and units (for example “95% CI … pp” or “p = …”), so do not write “95%” or “p =” yourself.",
     "3. Refer to experiments and hypotheses as {{E1}}, {{H1}} and so on.",
     "4. Say what the evidence supports and what it does not: follow the verdicts and outcomes in the fact table; an interval that includes zero is not evidence of an effect.",
     "5. Three to five plain sentences. Name which change, if either, explains the difference, and what to do next.",

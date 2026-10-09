@@ -70,7 +70,6 @@ export function LiveInvestigation({ config }: { config: LivePublicConfig }) {
   return (
     <div className="space-y-10">
       <Scenario />
-      <Roles config={config} />
       <section aria-labelledby="run-h">
         <SectionTitle id="run-h">Run</SectionTitle>
         {config.configured ? (
@@ -98,6 +97,7 @@ export function LiveInvestigation({ config }: { config: LivePublicConfig }) {
       </section>
       {view.plan && !view.result && <PlanView plan={view.plan} reasoning={view.models?.reasoning ?? config.reasoningModel} />}
       {view.result && <LiveResults result={view.result} />}
+      <Roles config={config} />
     </div>
   );
 }
@@ -149,14 +149,21 @@ function Scenario() {
 /* ── Who does what ────────────────────────────────────────────── */
 
 function Roles({ config }: { config: LivePublicConfig }) {
-  const reasoning = config.reasoningModel ?? DEFAULT_MODELS.gemini.reasoning;
+  const reasoning = config.reasoningModel;
   return (
     <section aria-labelledby="roles-h">
       <SectionTitle id="roles-h">The AI reasons. The system measures.</SectionTitle>
       <div className="mt-2 grid gap-3 md:grid-cols-2">
         <div className="rounded-[10px] border border-line bg-surface p-4">
           <div className="text-[13px] text-ink-3">
-            Reasoning model <Mono className="text-ink-2">{reasoning}</Mono>
+            Reasoning model{" "}
+            {reasoning ? (
+              <Mono className="text-ink-2">{reasoning}</Mono>
+            ) : (
+              <>
+                (default <Mono className="text-ink-2">{DEFAULT_MODELS.gemini.reasoning}</Mono>)
+              </>
+            )}
           </div>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-2 marker:text-ink-3">
             <li>Proposes competing hypotheses and the experiments that test them, as JSON.</li>
@@ -365,7 +372,8 @@ function NotConfigured({ config }: { config: LivePublicConfig }) {
             Live runs need a model key
           </h3>
           <p className="mt-1 max-w-[680px] text-ink-2">
-            This server has no model key, so nothing runs here and nothing on this page is simulated. {config.problem}
+            This server has no model key, so nothing runs here and nothing on this page is simulated.
+            {config.problem && <span className="mt-1 block text-ink">{config.problem}</span>}
           </p>
         </div>
       </div>

@@ -14,6 +14,8 @@ import type { LiveResult } from "@/lib/live/types";
 import { formatCIpp, formatP, formatPct, formatPP } from "@/lib/stats";
 import { assess, CHECK_LABELS, RUBRIC_LABEL } from "@/lib/validity";
 
+const PREDICTS = { increase: "higher accuracy in the treatment arm", decrease: "lower accuracy in the treatment arm", "no-difference": "no difference between arms" } as const;
+
 /** Everything below is derived in the browser from the counts the run recorded, with the app's own statistics. */
 export function LiveResults({ result }: { result: LiveResult }) {
   const inv = result.investigation;
@@ -48,7 +50,7 @@ export function LiveResults({ result }: { result: LiveResult }) {
                     {h.competing && <span className="text-ink-3"> · competing explanation</span>}
                   </p>
                   <p className="mt-1 text-[13px] text-ink-3">
-                    Predicts {h.prediction === "no-difference" ? "no difference" : `an ${h.prediction}`} · tested by {v.experiments.map((e) => e.id).join(", ") || "nothing"}
+                    Predicts {PREDICTS[h.prediction]} · tested by {v.experiments.map((e) => e.id).join(", ") || "nothing"}
                   </p>
                 </div>
                 <VerdictTag verdict={v.verdict} />

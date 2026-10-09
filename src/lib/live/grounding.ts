@@ -31,7 +31,7 @@ export function buildFacts(inv: Investigation, analysis: Analysis): Fact[] {
     add(`${e.id} control accuracy (${e.design.control.label})`, formatPct(r.control.rate));
     add(`${e.id} treatment accuracy (${e.design.treatment.label})`, formatPct(r.treatment.rate));
     add(`${e.id} difference, treatment minus control`, formatPP(r.diff));
-    add(`${e.id} 95% confidence interval of the difference`, `${formatCIpp(r.diffCI)} pp`);
+    add(`${e.id} confidence interval of the difference`, `95% CI ${formatCIpp(r.diffCI)} pp`);
     add(`${e.id} exact McNemar test`, formatP(r.p));
     const adj = analysis.holm.get(e.id);
     if (adj !== undefined && analysis.holm.size > 1) add(`${e.id} Holm-adjusted across ${analysis.holm.size} tests`, formatP(adj));
