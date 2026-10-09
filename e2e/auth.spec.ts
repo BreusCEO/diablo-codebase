@@ -33,28 +33,57 @@ test.describe("signed out", () => {
     const cookie = (await page.context().cookies()).find((c) => c.name === "diablo_session");
     expect(cookie?.httpOnly).toBe(true);
     expect(cookie?.sameSite).toBe("Lax");
+    // The test server runs the production build, where the cookie is Secure.
+    expect(cookie?.secure).toBe(true);
+    expect(cookie?.path).toBe("/");
   });
 
-  test("A deep link survives sign-in; a foreign ?next= does not", async ({ page }) => {
+  test("A deep link survives sign-in; a foreign ?next= does not", async ({ page, baseURL }) => {
     await page.goto("/investigations/tool-use-reliability?tab=report");
     expect(new URL(page.url()).searchParams.get("next")).toBe("/investigations/tool-use-reliability?tab=report");
     await enterDemo(page);
     await page.waitForURL("**/investigations/tool-use-reliability?tab=report");
 
-    await page.context().clearCookies();
-    await page.goto("/?next=//evil.example/steal");
-    await enterDemo(page);
-    await page.waitForURL("**/home");
-    expect(new URL(page.url()).pathname).toBe("/home");
+    // Protocol-relative, and dot segments that collapse into one.
+    for (const evil of ["//evil.example/steal", "/.//evil.example/steal", "/a/..//evil.example/steal"]) {
+      await page.context().clearCookies();
+      await page.goto(`/?next=${encodeURIComponent(evil)}`);
+      await enterDemo(page);
+      await page.waitForURL("**/home");
+      expect(new URL(page.url()).origin, evil).toBe(new URL(baseURL!).origin);
+      expect(new URL(page.url()).pathname, evil).toBe("/home");
+    }
   });
 
-  test("Demo sign-in works without JavaScript", async ({ browser }) => {
+  test("Demo sign-in works without JavaScript, and keeps a sanitised ?next=", async ({ browser, baseURL }) => {
     const ctx = await browser.newContext({ storageState: signedOut, javaScriptEnabled: false });
     const page = await ctx.newPage();
-    // The page is static, so without JavaScript it cannot read ?next=; it lands on Home.
     await page.goto("/");
+    await expect(page.locator('form[action="/api/auth/demo"] input[name="next"]')).toHaveValue("");
     await enterDemo(page);
     await page.waitForURL("**/home");
+
+    // The hidden field is in the server's HTML, so the deep link survives without any script.
+    await ctx.clearCookies();
+    await page.goto(`/?next=${encodeURIComponent("/investigations/tool-use-reliability?tab=report")}`);
+    await expect(page.locator('form[action="/api/auth/demo"] input[name="next"]')).toHaveValue("/investigations/tool-use-reliability?tab=report");
+    await enterDemo(page);
+    await page.waitForURL("**/investigations/tool-use-reliability?tab=report");
+
+    // Still relative paths only.
+    for (const evil of ["https://evil.example", "//evil.example", "/.//evil.example", "/api/auth/signout"]) {
+      await ctx.clearCookies();
+      await page.goto(`/?next=${encodeURIComponent(evil)}`);
+      await expect(page.locator('form[action="/api/auth/demo"] input[name="next"]'), evil).toHaveValue("");
+      await enterDemo(page);
+      await page.waitForURL("**/home");
+      expect(new URL(page.url()).origin, evil).toBe(new URL(baseURL!).origin);
+    }
+
+    // Errors are explained without JavaScript too.
+    await ctx.clearCookies();
+    await page.goto("/?error=state_mismatch");
+    await expect(page.locator("main [role=alert]")).toContainText("expired");
     await ctx.close();
   });
 
@@ -83,8 +112,24 @@ test.describe("signed out", () => {
     await page.goto("/home");
     expect(new URL(page.url()).pathname).toBe("/");
 
+    // The forged cookie is deleted on the way, and on the sign-in page too.
+    expect((await page.context().cookies()).some((c) => c.name === "diablo_session")).toBe(false);
+    await page.context().addCookies([{ name: "diablo_session", value: "garbage", domain: host, path: "/" }]);
+    await page.goto("/");
+    await expect(page.getByRole("button", { name: "Enter demo workspace" })).toBeVisible();
+    expect((await page.context().cookies()).some((c) => c.name === "diablo_session")).toBe(false);
+
     const demo = await request.post("/api/auth/demo", { headers: { Origin: "https://evil.example" }, maxRedirects: 0 });
     expect(demo.status()).toBe(403);
+    // A sibling site, a sandboxed frame (Origin: null), and no Origin at all are refused too.
+    const refused: Record<string, string>[] = [{ Origin: "https://evil.localhost" }, { Origin: "null" }, { "Sec-Fetch-Site": "cross-site" }, {}];
+    for (const headers of refused) {
+      const res = await request.post("/api/auth/demo", { headers, maxRedirects: 0 });
+      expect(res.status(), JSON.stringify(headers)).toBe(403);
+      expect(res.headers()["set-cookie"] ?? "", JSON.stringify(headers)).not.toContain("diablo_session");
+    }
+    const same = await request.post("/api/auth/demo", { headers: { Origin: new URL(baseURL!).origin }, maxRedirects: 0 });
+    expect(same.status()).toBe(303);
     const out = await request.post("/api/auth/signout", { headers: { Origin: "https://evil.example" }, maxRedirects: 0 });
     expect(out.status()).toBe(403);
     expect((await request.get("/api/auth/signout", { maxRedirects: 0 })).status()).toBe(405);
@@ -117,8 +162,12 @@ test.describe("signed out", () => {
 });
 
 test.describe("signed in", () => {
-  test("A signed-in visitor to / goes straight to /home", async ({ page }) => {
+  test("A signed-in visitor to / goes straight to /home, or on to a safe ?next=", async ({ page }) => {
     await page.goto("/");
+    await page.waitForURL("**/home");
+    await page.goto(`/?next=${encodeURIComponent("/settings")}`);
+    await page.waitForURL("**/settings");
+    await page.goto(`/?next=${encodeURIComponent("/.//evil.example")}`);
     await page.waitForURL("**/home");
   });
 
