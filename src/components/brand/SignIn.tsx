@@ -195,7 +195,7 @@ export function SignIn({
           {BRAND.name}
         </p>
 
-        <div className="entrance-auth glass mt-7 flex w-full flex-col items-center rounded-[16px] px-6 pb-6 pt-7 sm:px-8">
+        <div className="entrance-auth mt-7 flex w-full flex-col items-center">
           <h1 className="text-[26px] font-semibold leading-[34px] tracking-[-0.02em]">
             {BRAND.tagline}
           </h1>
