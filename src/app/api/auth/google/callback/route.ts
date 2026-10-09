@@ -26,12 +26,16 @@ async function handle(request: NextRequest) {
       verifier: checked.flow.verifier,
       nonce: checked.flow.nonce,
     });
+    console.info("[auth] Google sign-in succeeded");
     // `next` was sanitised before it was sealed; sanitise again where it is used.
     return clearFlow(await setSession(redirectTo(request, safeNext(checked.flow.next), 302), identity));
   } catch (err) {
     const code = err instanceof AuthFlowError ? err.code : "server_error";
     if (code === "exchange_failed" || code === "server_error") {
       console.error("[auth] Google callback failed:", err instanceof Error ? err.message : "unknown error");
+    } else {
+      // Every other outcome is logged too (a code only, never a token or an email), so a failed sign-in can be traced.
+      console.warn("[auth] Google callback refused:", code, flow ? "(flow cookie present)" : "(no flow cookie)");
     }
     const res = redirectWithError(request, code, flow ? safeNext(flow.next) : undefined);
     // The flow cookie is single-use once this flow's own answer arrives, whatever
