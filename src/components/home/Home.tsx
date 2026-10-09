@@ -25,20 +25,15 @@ export function Home() {
 
   return (
     <>
-      {/* A burgundy horizon: a dome rising from the bottom, lit along its rim, fading to black. */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[62vh] overflow-hidden">
-        {/* The glow above the rim. */}
+      {/* A soft burgundy-to-black glow at the bottom: translucent, blurred, no hard edge. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[60vh] overflow-hidden">
         <div
-          className="absolute left-1/2 top-[18%] h-[60%] w-[120%] -translate-x-1/2 rounded-[50%] blur-3xl"
-          style={{ background: "radial-gradient(closest-side, rgb(87 0 26 / 0.55), transparent)" }}
+          className="absolute -bottom-[30%] left-1/2 h-[90%] w-[110%] -translate-x-1/2 rounded-[50%] blur-[80px]"
+          style={{ background: "radial-gradient(closest-side, rgb(87 0 26 / 0.42), rgb(87 0 26 / 0.18) 55%, transparent)" }}
         />
-        {/* The dome itself. */}
         <div
-          className="absolute left-1/2 top-[34%] h-[160%] w-[170%] -translate-x-1/2 rounded-[50%]"
-          style={{
-            background: "linear-gradient(to bottom, rgb(122 10 46) 0%, rgb(87 0 26) 12%, rgb(40 0 12) 34%, rgb(10 2 5) 60%)",
-            boxShadow: "0 -1px 0 rgb(231 166 184 / 0.35), 0 -30px 90px rgb(87 0 26 / 0.55)",
-          }}
+          className="absolute inset-x-0 bottom-0 h-[45%]"
+          style={{ background: "linear-gradient(to bottom, transparent, rgb(20 4 9 / 0.22))" }}
         />
       </div>
       <div className="relative mx-auto flex min-h-full w-full max-w-[720px] flex-col px-4 pb-8 pt-[clamp(48px,18vh,168px)] sm:px-6">
