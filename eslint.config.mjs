@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // The marketing site is its own Next.js project with its own lint config.
     "site/**",
+    // The developer's local course (untracked): not part of the app.
+    "learn/**",
   ]),
 ]);
 

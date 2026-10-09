@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { authSecret, googleConfig, secureCookies } from "@/lib/auth/env";
-import { authorizationUrl, OAUTH_COOKIE, OAUTH_COOKIE_PATH, OAUTH_TTL_SECONDS, randomToken, sealFlow } from "@/lib/auth/google";
+import { authorizationUrl, newFlow, OAUTH_COOKIE, OAUTH_COOKIE_PATH, OAUTH_TTL_SECONDS, sealFlow } from "@/lib/auth/google";
 import { originOf, redirectTo, redirectWithError, requestOrigin } from "@/lib/auth/http";
 import { safeNext } from "@/lib/auth/next-path";
 
@@ -21,11 +21,11 @@ export async function GET(request: NextRequest) {
     return redirectTo(request, `${origin}/api/auth/google?${new URLSearchParams({ next })}`, 302);
   }
 
-  const state = randomToken();
-  const verifier = randomToken(48);
-  const url = await authorizationUrl(config, origin, state, verifier);
+  // State, PKCE verifier and OIDC nonce, all bound to this browser's cookie.
+  const flow = newFlow(next);
+  const url = await authorizationUrl(config, origin, flow);
   const res = redirectTo(request, url.toString(), 302);
-  res.cookies.set(OAUTH_COOKIE, await sealFlow({ state, verifier, next }, authSecret()), {
+  res.cookies.set(OAUTH_COOKIE, await sealFlow(flow, authSecret()), {
     httpOnly: true,
     secure: secureCookies(),
     // Lax: the cookie must come back on Google's top-level redirect to us.

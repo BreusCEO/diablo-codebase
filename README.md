@@ -40,11 +40,13 @@ npm run check:release  # fails while legal/contact placeholders remain in src/li
 
 First time on a machine: `npx playwright install chromium`. Run `npm run build` before `npm run test:e2e`. The e2e server gets a throwaway `AUTH_SECRET`; a setup project signs in once through the demo route and every spec reuses that session.
 
+Deploying: production is deployed with the Vercel CLI from a local folder, which uploads the working tree and ignores `.gitignore`. The committed `.vercelignore` keeps local env files, QA and test output, `site/` and `engine/` (separate projects) and `learn/` out of the upload. Keep `e2e/` in it: `playwright.config.ts` imports `e2e/helpers`, and `next build` type-checks both. `tsconfig.json` and the ESLint config also skip `learn/`, so a local course folder never breaks the app's checks. Run `npx next build` locally before deploying.
+
 ## Sign-in
 
 Every workspace route (`/home`, `/investigations`, `/systems`, `/experiments`, `/evidence`, `/reports`, `/datasets`, `/settings`, `/design`) needs a session. There is no database: the session is a signed JWT (HS256, `jose`) in an `httpOnly`, `SameSite=Lax` cookie (`Secure` in production) that lasts 7 days.
 
-- **Continue with Google**: OAuth 2.0 Authorization Code flow with PKCE (S256) and a `state` nonce, done with plain `fetch`. The verifier, state and return path travel in a 10-minute signed cookie scoped to `/api/auth/google`. The callback checks state, exchanges the code with the verifier, and checks the ID token's issuer, audience, expiry and verified email. If `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are not set, the button is shown disabled with the reason.
+- **Continue with Google**: OAuth 2.0 Authorization Code flow with PKCE (S256), a `state` and an OpenID Connect `nonce`, done with plain `fetch`. The verifier, state, nonce and return path travel in a 10-minute signed cookie scoped to `/api/auth/google`. The callback checks state, exchanges the code with the verifier, then verifies the ID token: its RS256 signature against Google's published keys (`https://www.googleapis.com/oauth2/v3/certs`, fetched with `jose` and cached), issuer, audience and `azp`, expiry, the nonce from the cookie, and a verified email. If `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are not set, the button is shown disabled with the reason.
 - **Enter demo workspace**: a real server session flagged `demo` ("Demo researcher"), so the demo works without a Google account.
 - **Email and password** are not offered: they need a user store (hashes, verification, resets), and this app deliberately has no database. Add one before adding them.
 
@@ -52,13 +54,13 @@ How it fits together:
 
 | Path | Role |
 | --- | --- |
-| `src/proxy.ts` | Verifies the cookie for every workspace route and app API route; redirects to `/` with `?next=`; sends signed-in visitors on `/` to `/home` |
+| `src/proxy.ts` | Verifies the cookie for every workspace route and app API route; redirects to `/` with `?next=`; sends signed-in visitors on `/` on to `?next=` or `/home`; deletes a cookie that fails verification; refuses state-changing app API requests (not GET/HEAD/OPTIONS) from any other origin |
 | `src/app/(app)/layout.tsx` | Starts the server-side session read (`getSession()`), hands the promise to `SessionProvider`, and redirects again if it is missing (defence in depth) |
 | `src/lib/auth/` | `env` (the only env reads), `session` (sign/verify), `google` (PKCE flow), `dal` (`getSession()`), `http` (cookies, same-origin check), `next-path` (open-redirect guard) |
 | `src/app/api/auth/*` | `GET google`, `GET google/callback`, `POST demo`, `POST signout` (POSTs require a same-origin `Origin`) |
 | `src/components/auth/SessionProvider.tsx` | `useSession()` and `signOut()` for client components |
 
-Environment variables (see `.env.example`): `AUTH_SECRET` (required in production, 32+ characters: `openssl rand -base64 32`), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and optionally `APP_ORIGIN` (the public origin used for the redirect URI; defaults to the request's). The sign-in page is static, so a change to the Google variables takes effect on the next deploy.
+Environment variables (see `.env.example`): `AUTH_SECRET` (required in production, 32+ characters: `openssl rand -base64 32`), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and optionally `APP_ORIGIN` (the public origin used for the redirect URI; defaults to the request's). The sign-in page renders per request (so that without JavaScript the demo form still carries `?next=` and errors still show) and reads the Google variables when it renders; on Vercel a change to them takes effect on the next deploy.
 
 Google Cloud Console: create an OAuth client of type **Web application** with the authorized redirect URIs `https://diablo.pnoia.dev/api/auth/google/callback` and `http://localhost:3123/api/auth/google/callback`. Scopes: `openid`, `email`, `profile`.
 
