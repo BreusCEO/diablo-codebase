@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { ArrowRight } from "lucide-react";
+import { Activity, ArrowRight } from "lucide-react";
 import { InvestigationRow, RowSkeleton } from "@/components/research/InvestigationRow";
 import { EmptyState, Progress } from "@/components/ui/primitives";
 import { StatusDot } from "@/components/ui/Status";
@@ -126,6 +126,15 @@ export function Home() {
           </ul>
         )}
       </div>
+
+      <Link
+        href="/live"
+        className="rise mt-6 inline-flex items-center gap-2 self-center rounded-full border border-line px-3.5 py-1.5 text-[13px] text-ink-2 transition-colors duration-150 [--d:150ms] hover:bg-sunken hover:text-ink"
+      >
+        <Activity className="size-4 text-accent-text" strokeWidth={1.5} aria-hidden />
+        Live investigation: a real model on a planted change
+        <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden />
+      </Link>
 
       {ws.ready && <RunningNow investigations={ws.investigations} />}
 

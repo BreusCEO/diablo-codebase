@@ -82,7 +82,7 @@ test("7. Theme persists across reload, before first paint, and on the 404 page",
   await page.keyboard.press("Escape");
 
   await page.goto("/home", { waitUntil: "commit" });
-  // Right after "commit" the new document may not have its root element yet.
+  // At "commit" the new document may not have an <html> element yet; wait for it, then for the attribute.
   await page.waitForFunction(() => document.documentElement?.hasAttribute("data-theme") ?? false);
   expect(await page.evaluate(() => document.documentElement.getAttribute("data-theme"))).toBe("dark");
 

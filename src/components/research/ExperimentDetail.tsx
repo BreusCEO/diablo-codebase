@@ -348,7 +348,9 @@ export function ExperimentDetail({ exp }: { exp: Experiment }) {
         >
           Copy reproducibility bundle (JSON)
         </Button>
-        <p className="mt-2 text-[12px] text-ink-3">{provider.label}: runs are simulated by the demo provider.</p>
+        <p className="mt-2 text-[12px] text-ink-3">
+          {exp.simulation === null ? "Recorded from a live run on a real model; every answer was scored by code." : `${provider.label}: runs are simulated by the demo provider.`}
+        </p>
       </Section>
     </div>
   );

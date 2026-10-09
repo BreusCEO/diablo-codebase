@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useRef, useEffect, useState, type FormEvent } from "react";
 import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { safeNext } from "@/lib/auth/next-path";
@@ -19,34 +19,20 @@ const ERRORS: Record<string, string> = {
   demo_failed: "The demo workspace couldn't be opened. Please reload and try again.",
 };
 
-/** The query string, read after hydration (the page itself is static). */
-const subscribeNoop = () => () => {};
-function useQuery() {
-  const search = useSyncExternalStore(
-    subscribeNoop,
-    () => window.location.search,
-    () => "",
-  );
-  const params = new URLSearchParams(search);
-  const rawNext = params.get("next");
-  const error = params.get("error");
-  return {
-    next: safeNext(rawNext),
-    rawNext: rawNext ? safeNext(rawNext, "") : "",
-    error: error ? (ERRORS[error] ?? ERRORS.server_error) : null,
-  };
-}
-
 /**
  * The entrance (brand spec §19–23): burgundy, the cream mark revealing itself,
  * then the way in on a sheet of frosted glass. The reveal is full on a first
  * visit (the boot script sets data-reveal) and short afterwards; a click or
  * key skips it. Content is server-rendered and timed with CSS, so it appears
  * without JavaScript too, and both ways in work without JavaScript.
+ *
+ * `next` arrives from the server already sanitised ("" when there is none),
+ * so the hidden field carries it even when no script runs.
  */
-export function SignIn({ googleEnabled }: { googleEnabled: boolean }) {
+export function SignIn({ googleEnabled, next: requested, error: errorCode }: { googleEnabled: boolean; next: string; error: string | null }) {
   const reduce = useReduce();
-  const { next, rawNext, error } = useQuery();
+  const next = safeNext(requested);
+  const error = errorCode ? (ERRORS[errorCode] ?? ERRORS.server_error) : null;
   const [skipped, setSkipped] = useState(false);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -114,7 +100,7 @@ export function SignIn({ googleEnabled }: { googleEnabled: boolean }) {
   };
 
   const message = failed ? ERRORS.demo_failed : error;
-  const googleHref = rawNext ? `/api/auth/google?next=${encodeURIComponent(rawNext)}` : "/api/auth/google";
+  const googleHref = requested ? `/api/auth/google?next=${encodeURIComponent(requested)}` : "/api/auth/google";
 
   return (
     <main
@@ -186,7 +172,7 @@ export function SignIn({ googleEnabled }: { googleEnabled: boolean }) {
           </div>
 
           <form method="post" action="/api/auth/demo" onSubmit={enterDemo} className="w-full">
-            <input type="hidden" name="next" value={rawNext} />
+            <input type="hidden" name="next" value={requested} />
             <motion.button
               ref={button}
               type="submit"

@@ -1,4 +1,4 @@
-import { analyzeExperiment, finishedExperiments, holmAdjusted, primaryRun, verdictFor } from "@/lib/data/derive";
+import { analyzeExperiment, finishedExperiments, holmAdjusted, isLiveInvestigation, primaryRun, verdictFor } from "@/lib/data/derive";
 import { experimentInterpretation, investigationInterpretation, strengthLine, VERDICT_LABEL } from "@/lib/data/interpret";
 import type { Investigation } from "@/lib/data/types";
 import { formatCIpp, formatP, formatPct, formatPP, signed } from "@/lib/stats";
@@ -22,7 +22,7 @@ export function reportMarkdown(inv: Investigation, a: Assessment, systemName: (i
   const adj = holmAdjusted(inv);
   const L: string[] = [];
   L.push(`# ${inv.title}`, "");
-  L.push(`${systemName(inv.systemId)} · generated ${new Date().toISOString().slice(0, 10)} · ${BRAND.name} (demo data, simulated runs)`, "");
+  L.push(`${systemName(inv.systemId)} · generated ${new Date().toISOString().slice(0, 10)} · ${BRAND.name} (${isLiveInvestigation(inv) ? "live run on a real model, scored by code" : "demo data, simulated runs"})`, "");
   if (done.length) {
     L.push("## Summary", "", `**${strengthLine(a)}**`, "", `_Interpretation:_ ${investigationInterpretation(inv)}`, "");
   }

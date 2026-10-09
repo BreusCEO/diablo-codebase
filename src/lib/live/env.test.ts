@@ -1,0 +1,78 @@
+import { describe, expect, it } from "vitest";
+import { CAP_LIMITS, maxCalls } from "./budget";
+import { liveConfig, providerKey, publicConfig } from "./env";
+import { DEFAULT_MODELS } from "./providers";
+
+describe("live env: provider pick", () => {
+  it("is not configured without a key (not a misconfiguration, so no problem text)", () => {
+    const c = liveConfig({});
+    expect(c.provider).toBeNull();
+    expect(c.problem).toBeNull();
+  });
+
+  it("picks Gemini when its key exists, else Z.ai", () => {
+    expect(liveConfig({ GEMINI_API_KEY: "g" }).provider).toBe("gemini");
+    expect(liveConfig({ ZAI_API_KEY: "z" }).provider).toBe("zai");
+    expect(liveConfig({ GEMINI_API_KEY: "g", ZAI_API_KEY: "z" }).provider).toBe("gemini");
+  });
+
+  it("DIABLO_LLM chooses, and needs that provider's key", () => {
+    expect(liveConfig({ DIABLO_LLM: "zai", GEMINI_API_KEY: "g", ZAI_API_KEY: "z" }).provider).toBe("zai");
+    const missing = liveConfig({ DIABLO_LLM: "zai", GEMINI_API_KEY: "g" });
+    expect(missing.provider).toBeNull();
+    expect(missing.problem).toMatch(/ZAI_API_KEY/);
+    expect(liveConfig({ DIABLO_LLM: "openai", GEMINI_API_KEY: "g" }).provider).toBeNull();
+  });
+
+  it("uses the provider's default models unless overridden, and refuses odd model ids", () => {
+    const g = liveConfig({ GEMINI_API_KEY: "g" });
+    expect([g.reasoningModel, g.targetModel]).toEqual([DEFAULT_MODELS.gemini.reasoning, DEFAULT_MODELS.gemini.target]);
+    const z = liveConfig({ ZAI_API_KEY: "z", DIABLO_TARGET_MODEL: "glm-4.5-flash" });
+    expect([z.reasoningModel, z.targetModel]).toEqual([DEFAULT_MODELS.zai.reasoning, "glm-4.5-flash"]);
+    const bad = liveConfig({ GEMINI_API_KEY: "g", DIABLO_REASONING_MODEL: "../../v1/files" });
+    expect(bad.provider).toBeNull();
+    expect(bad.problem).toMatch(/DIABLO_REASONING_MODEL/);
+  });
+});
+
+describe("live env: caps", () => {
+  it("defaults to 2 experiments × 2 arms × 40 items", () => {
+    const { caps } = liveConfig({});
+    expect([caps.maxExperiments, caps.maxItemsPerArm]).toEqual([2, 40]);
+    expect(maxCalls(caps)).toEqual({ draft: 3, target: 160, interpret: 2, total: 165 });
+  });
+
+  it("clamps overrides to the absolute ceilings", () => {
+    const { caps, limits } = liveConfig({
+      LIVE_MAX_EXPERIMENTS: "50",
+      LIVE_MAX_ITEMS_PER_ARM: "100000",
+      LIVE_CONCURRENCY: "0",
+      LIVE_RUN_DEADLINE_SECONDS: "9999",
+      LIVE_DAILY_CALL_CAP: "abc",
+      LIVE_COOLDOWN_SECONDS: "5",
+    });
+    expect(caps.maxExperiments).toBe(CAP_LIMITS.maxExperiments.max);
+    expect(caps.maxItemsPerArm).toBe(CAP_LIMITS.maxItemsPerArm.max);
+    expect(caps.concurrency).toBe(1);
+    expect(caps.runDeadlineMs).toBe(CAP_LIMITS.runDeadlineMs.max);
+    expect(limits.dailyCallCap).toBe(500);
+    expect(limits.cooldownMs).toBe(5000);
+  });
+});
+
+describe("live env: what the page sees", () => {
+  it("has no key in it", () => {
+    const env = { GEMINI_API_KEY: "AIza-super-secret" };
+    const pub = publicConfig(liveConfig(env));
+    expect(JSON.stringify(pub)).not.toContain("AIza-super-secret");
+    expect(pub).toMatchObject({ configured: true, provider: "gemini", providerLabel: "Gemini API" });
+    expect(providerKey("gemini", env)).toBe("AIza-super-secret");
+  });
+
+  it("shows the estimate even when not configured, and no model names", () => {
+    const pub = publicConfig(liveConfig({}));
+    expect(pub.configured).toBe(false);
+    expect(pub.reasoningModel).toBeNull();
+    expect(pub.estimate.total).toBe(165);
+  });
+});

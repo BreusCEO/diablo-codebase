@@ -201,3 +201,7 @@ export const totalSamples = (inv: Investigation) =>
     const r = analyzeExperiment(e)!;
     return n + r.control.n + r.treatment.n;
   }, 0);
+
+/** Recorded from a live run on a real model (src/lib/live), not simulated by the demo provider. */
+export const isLiveInvestigation = (inv: Investigation) =>
+  inv.experiments.length > 0 && inv.experiments.every((e) => e.simulation === null && e.runs.every((r) => r.samples.every((s) => !s.simulated)));

@@ -1,0 +1,106 @@
+/**
+ * The LLM port: the one shape every model adapter has. Plain data in, plain
+ * data out, so the pipeline can run against a real provider or a scripted
+ * fake without knowing which.
+ */
+
+export type LLMProvider = "gemini" | "zai" | "fake";
+
+export interface LLMMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface LLMRequest {
+  system: string;
+  messages: LLMMessage[];
+  /** Ask the provider for a JSON object (Gemini: application/json; Z.ai: json_object). */
+  json?: boolean;
+  temperature?: number;
+  maxTokens?: number;
+  /** Cancels the call (the client went away, or the run hit its deadline). */
+  signal?: AbortSignal;
+  /** Per-call timeout; the adapter's default applies when absent. */
+  timeoutMs?: number;
+}
+
+export interface LLMUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface LLMResponse {
+  text: string;
+  usage: LLMUsage;
+  /** The model that answered, as the provider reports it. */
+  model: string;
+  /** Provider finish reason, e.g. "STOP", "MAX_TOKENS", "stop", "BLOCKED:SAFETY". */
+  finishReason: string | null;
+}
+
+export interface LLM {
+  readonly provider: LLMProvider;
+  readonly model: string;
+  complete(request: LLMRequest): Promise<LLMResponse>;
+}
+
+/**
+ * What went wrong, in terms the pipeline can act on:
+ * - fatal for the whole run: auth, model-not-found, quota, bad-request
+ * - retried with backoff: rate-limit (429 that is not a daily quota), server (5xx)
+ * - recorded per call: timeout, network, bad-response
+ * - aborted: the caller cancelled
+ */
+export type LLMErrorKind =
+  | "auth"
+  | "model-not-found"
+  | "rate-limit"
+  | "quota"
+  | "server"
+  | "bad-request"
+  | "network"
+  | "timeout"
+  | "bad-response"
+  | "aborted";
+
+export class LLMError extends Error {
+  readonly kind: LLMErrorKind;
+  readonly provider: LLMProvider;
+  /** HTTP status when the provider answered; null for network failures. */
+  readonly status: number | null;
+  /** How long the provider asked us to wait, when it said. */
+  readonly retryAfterMs: number | null;
+
+  constructor(
+    kind: LLMErrorKind,
+    message: string,
+    opts: { provider: LLMProvider; status?: number | null; retryAfterMs?: number | null },
+  ) {
+    super(message);
+    this.name = "LLMError";
+    this.kind = kind;
+    this.provider = opts.provider;
+    this.status = opts.status ?? null;
+    this.retryAfterMs = opts.retryAfterMs ?? null;
+  }
+}
+
+export const isRetryable = (e: unknown): e is LLMError =>
+  e instanceof LLMError && (e.kind === "rate-limit" || e.kind === "server");
+
+/** Errors after which no further call can succeed: stop the run. */
+export const isFatal = (e: unknown): e is LLMError =>
+  e instanceof LLMError && (e.kind === "auth" || e.kind === "model-not-found" || e.kind === "quota" || e.kind === "bad-request");
+
+export const ERROR_HINT: Record<LLMErrorKind, string> = {
+  auth: "The model key was rejected. Check GEMINI_API_KEY (or ZAI_API_KEY) in the environment.",
+  "model-not-found": "The configured model id does not exist for this key. Check DIABLO_REASONING_MODEL and DIABLO_TARGET_MODEL.",
+  "rate-limit": "The provider is rate-limiting this key. Wait a minute and try again.",
+  quota: "The key's quota is used up (for example the free tier's daily limit). Try again tomorrow or use another key.",
+  server: "The provider had a server error. Try again shortly.",
+  "bad-request": "The provider refused the request as malformed.",
+  network: "The provider could not be reached.",
+  timeout: "A model call took too long and was stopped.",
+  "bad-response": "The provider answered with something that could not be read.",
+  aborted: "The run was cancelled.",
+};

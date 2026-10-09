@@ -15,12 +15,16 @@ import { analyzeExperiment, hashString } from "../derive";
 import { answerQuestion, experimentInterpretation, investigationInterpretation } from "../interpret";
 import type { DataProvider, WorkspaceSnapshot } from "../provider";
 import { MAX_QUESTION } from "../provider";
-import { parseSaved, RESET_MESSAGE, STATE_VERSION, type Persisted } from "../schema";
+import { investigationSchema, parseSaved, RESET_MESSAGE, STATE_VERSION, type Persisted } from "../schema";
 import type { Experiment, Investigation, Run, SessionEvent } from "../types";
 import { designInvestigation } from "./agent";
 import { DATASETS, SYSTEMS } from "./catalog";
 import { seedInvestigations } from "./fixtures";
 import { simulateRun } from "./simulate";
+import { liveDataset } from "@/lib/live/dataset";
+import { HELPER_CATALOG } from "@/lib/live/registry";
+
+const LIVE_DATASET = liveDataset();
 
 const KEY = "diablo.workspace";
 /** Keys written by the first prototype; their shape is not compatible. */
@@ -138,7 +142,8 @@ function event(inv: Investigation, kind: SessionEvent["kind"], text: string, ref
   return { id: `${inv.id}/ev-${Date.now().toString(36)}-${++evSeq}`, kind, at: nowIso(offsetMs), text, refs, experimentId };
 }
 
-const familyOf = (systemId: string) => SYSTEMS.find((s) => s.id === systemId)?.family ?? null;
+const findSystem = (id: string) => SYSTEMS.find((s) => s.id === id) ?? HELPER_CATALOG.find((s) => s.id === id);
+const familyOf = (systemId: string) => findSystem(systemId)?.family ?? null;
 
 /* ── Runs ──────────────────────────────────────────────────────── */
 
@@ -261,6 +266,12 @@ function newRun(inv: Investigation, exp: Experiment, role: Run["role"]): Run {
 }
 
 function startRun(invId: string, expId: string, role: Run["role"], allow: (e: Experiment) => boolean) {
+  const target = getSnapshot().investigations.find((i) => i.id === invId)?.experiments.find((e) => e.id === expId);
+  // A live experiment has no simulation prior: it is never re-run with made-up data.
+  if (target && target.simulation === null) {
+    toast({ title: "Live experiments are not simulated", body: "Start a new run on the Live investigation page." });
+    return;
+  }
   updateInvestigation(invId, (inv) => {
     const exp = inv.experiments.find((e) => e.id === expId);
     if (!exp || !allow(exp)) return inv;
@@ -303,9 +314,9 @@ export const mockProvider: DataProvider = {
   getServerSnapshot: () => SERVER_SNAPSHOT,
 
   listSystems: () => SYSTEMS,
-  getSystem: (id) => SYSTEMS.find((s) => s.id === id),
+  getSystem: findSystem,
   listDatasets: () => DATASETS,
-  getDataset: (id) => DATASETS.find((d) => d.id === id),
+  getDataset: (id) => DATASETS.find((d) => d.id === id) ?? (id === LIVE_DATASET.id ? LIVE_DATASET : undefined),
 
   createInvestigation(question, systemId) {
     const q = question.trim().slice(0, MAX_QUESTION);
@@ -388,6 +399,13 @@ export const mockProvider: DataProvider = {
   },
   setPinned(invId, pinned) {
     updateInvestigation(invId, (inv) => (inv.pinned === pinned ? inv : { ...inv, pinned }));
+  },
+  importInvestigation(investigation) {
+    const parsed = investigationSchema.safeParse(investigation);
+    if (!parsed.success) return null;
+    const inv = parsed.data as Investigation;
+    update((list) => [inv, ...list.filter((i) => i.id !== inv.id)]);
+    return inv.id;
   },
   remove(invId) {
     update((list) => (list.some((i) => i.id === invId) ? list.filter((i) => i.id !== invId) : list));

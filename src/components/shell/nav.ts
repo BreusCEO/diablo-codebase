@@ -1,4 +1,4 @@
-import { BookOpen, Cpu, Database, FileText, FlaskConical, House, Microscope, Settings, type LucideIcon } from "lucide-react";
+import { Activity, BookOpen, Cpu, Database, FileText, FlaskConical, House, Microscope, Settings, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -9,10 +9,13 @@ export type NavItem = { href: string; label: string; icon: LucideIcon };
  */
 export const HOME: NavItem = { href: "/home", label: "Home", icon: House };
 export const INVESTIGATIONS: NavItem = { href: "/investigations", label: "Investigations", icon: Microscope };
+/** A real model run end to end (src/lib/live). */
+export const LIVE: NavItem = { href: "/live", label: "Live investigation", icon: Activity };
 
 export const PRIMARY: NavItem[] = [
   HOME,
   INVESTIGATIONS,
+  LIVE,
   { href: "/systems", label: "AI systems", icon: Cpu },
   { href: "/experiments", label: "Experiments", icon: FlaskConical },
   { href: "/evidence", label: "Evidence", icon: BookOpen },
@@ -25,7 +28,7 @@ export const SECONDARY: NavItem[] = [
 ];
 
 /** Everything after Home and Investigations: the library pages. */
-export const LIBRARY: NavItem[] = [...PRIMARY.slice(2), SECONDARY[0]];
+export const LIBRARY: NavItem[] = [...PRIMARY.slice(3), SECONDARY[0]];
 
 export const LEGAL = [
   { href: "/legal/terms", label: "Terms of Service", short: "Terms" },
@@ -36,6 +39,7 @@ export const LEGAL = [
 export const PAGE_TITLES: Record<string, string> = {
   "/home": "Home",
   "/investigations": "Investigations",
+  "/live": "Live investigation",
   "/systems": "AI systems",
   "/experiments": "Experiments",
   "/datasets": "Datasets",
