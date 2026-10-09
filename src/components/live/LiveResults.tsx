@@ -14,6 +14,7 @@ import { strengthLine } from "@/lib/data/interpret";
 import type { Experiment } from "@/lib/data/types";
 import { count, duration } from "@/lib/format";
 import { liveSystems } from "@/lib/live/analyze";
+import { formatUsd, runCostUsd } from "@/lib/live/pricing";
 import type { LiveResult } from "@/lib/live/types";
 import { formatCIpp, formatP, formatPct, formatPP } from "@/lib/stats";
 import { toast } from "@/lib/ui";
@@ -233,6 +234,13 @@ function Validity({ result, assessment }: { result: LiveResult; assessment: Retu
   );
 }
 
+/** The measured tokens priced at the Claude list prices in pricing.ts; no row for a model without a known price. */
+function costRow(result: LiveResult): [string, string][] {
+  const c = runCostUsd(result.models, result.usage.byStage);
+  if (!c) return [];
+  return [["Cost at list price", `${formatUsd(c.total)} (reasoning ${formatUsd(c.reasoning)}, target ${formatUsd(c.target)})`]];
+}
+
 function RunRecord({ result }: { result: LiveResult }) {
   const u = result.usage;
   const r = result.run;
@@ -244,6 +252,7 @@ function RunRecord({ result }: { result: LiveResult }) {
     ["Pairs analysed", r.perExperiment.map((e) => `${e.id} ${e.completedPairs} of ${e.plannedPairs}`).join(" · ")],
     ["Model calls in total", `${count(u.calls)} (plan ${u.byStage.draft.calls}, run ${count(u.byStage.run.calls)}, conclusion ${u.byStage.interpret.calls})`],
     ["Tokens", `${count(u.inputTokens)} in, ${count(u.outputTokens)} out`],
+    ...costRow(result),
     ["Run time", `${duration(Date.parse(result.finishedAt) - Date.parse(result.startedAt))}${r.deadlineHit ? " (the run deadline stopped new calls)" : ""}`],
   ];
   return (

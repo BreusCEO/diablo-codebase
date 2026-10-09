@@ -37,6 +37,8 @@ export default defineConfig({
       GOOGLE_CLIENT_ID: "",
       GOOGLE_CLIENT_SECRET: "",
       // No model provider in tests: live runs show their honest "needs a key" state and make no calls.
+      ANTHROPIC_API_KEY: "",
+      ANTHROPIC_WORKSPACE_ID: "",
       GEMINI_API_KEY: "",
       ZAI_API_KEY: "",
       DIABLO_LLM: "",
