@@ -40,6 +40,8 @@ export interface DataProvider {
   rename(investigationId: string, title: string): void;
   setPinned(investigationId: string, pinned: boolean): void;
   remove(investigationId: string): void;
+  /** Adds a finished investigation recorded elsewhere (a live run). Returns its id, or null when it does not validate. */
+  importInvestigation(investigation: Investigation): string | null;
   toggleFlag(investigationId: string, sampleId: string): void;
 
   exportAll(): string;

@@ -4,6 +4,7 @@
  * scorer never needs a model to decide what is right.
  */
 import { hashString } from "@/lib/data/derive";
+import type { Dataset } from "@/lib/data/types";
 import { mulberry32 } from "@/lib/stats";
 
 export interface Item {
@@ -61,4 +62,25 @@ export function makeItems(n: number, seed: number = DATASET.seed): Item[] {
 /** A content hash of the items, recorded on every run. */
 export function itemsHash(items: Item[]): string {
   return `fnv1a:${hashString(JSON.stringify(items.map((x) => [x.id, x.prompt, x.answer]))).toString(16).padStart(8, "0")}`;
+}
+
+/** The dataset as a catalog entry, so the workspace can describe live experiments. */
+export function liveDataset(): Dataset {
+  const sample = makeItems(5);
+  return {
+    id: DATASET.id,
+    name: DATASET.name,
+    size: DATASET_MAX,
+    split: "custom",
+    heldOut: null,
+    // Each run records the hash of the items it used (they depend on n).
+    hash: null,
+    description: DATASET.description,
+    schema: [
+      { name: "id", type: "string", description: "Item id, A001 onwards" },
+      { name: "prompt", type: "string", description: "The question the target is asked" },
+      { name: "answer", type: "integer", description: "Exact answer, computed by code" },
+    ],
+    sampleRows: sample.map((x) => ({ id: x.id, prompt: x.prompt, answer: String(x.answer) })),
+  };
 }

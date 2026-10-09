@@ -112,3 +112,16 @@ export function helperSystems(targetModel: string, family: string | null): AISys
     description: `Arithmetic assistant on ${targetModel} with the ${v.settings.system_prompt} system prompt at temperature ${v.settings.temperature}.`,
   }));
 }
+
+/** The Helper versions as catalog entries when the target model is not known (the workspace's lookups). */
+export const HELPER_CATALOG: AISystem[] = VERSIONS.map((v) => ({
+  id: v.id,
+  name: v.name,
+  product: "Helper",
+  version: v.version,
+  kind: "app",
+  family: null,
+  // The model is recorded on each run; an arm that varies one factor is not exactly this version.
+  versionString: null,
+  description: `${v.name}: ${v.settings.system_prompt} system prompt, temperature ${v.settings.temperature}. A live experiment's arm settings show exactly what ran.`,
+}));

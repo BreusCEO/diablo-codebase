@@ -1,10 +1,14 @@
 "use client";
 
-import { CircleAlert, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { ArrowUpRight, CircleAlert, ShieldCheck } from "lucide-react";
+import { Button } from "@/components/ui/Button";
 import { ForestPlot } from "@/components/charts/Charts";
 import { Mono, VerdictTag } from "@/components/research/common";
 import { ScrollRegion, SectionTitle } from "@/components/ui/primitives";
 import { cn } from "@/lib/cn";
+import { provider } from "@/lib/data";
 import { analyzeExperiment, holmAdjusted, verdictFor } from "@/lib/data/derive";
 import { strengthLine } from "@/lib/data/interpret";
 import type { Experiment } from "@/lib/data/types";
@@ -12,6 +16,7 @@ import { count, duration } from "@/lib/format";
 import { liveSystems } from "@/lib/live/analyze";
 import type { LiveResult } from "@/lib/live/types";
 import { formatCIpp, formatP, formatPct, formatPP } from "@/lib/stats";
+import { toast } from "@/lib/ui";
 import { assess, CHECK_LABELS, RUBRIC_LABEL } from "@/lib/validity";
 
 const PREDICTS = { increase: "higher accuracy in the treatment arm", decrease: "lower accuracy in the treatment arm", "no-difference": "no difference between arms" } as const;
@@ -34,6 +39,7 @@ export function LiveResults({ result }: { result: LiveResult }) {
           <span className="text-[12px] text-ink-3">Evidence strength · {RUBRIC_LABEL}</span>
         </div>
         <Conclusion result={result} />
+        <OpenInWorkspace result={result} />
       </section>
 
       <section aria-labelledby="live-hyp-h">
@@ -298,5 +304,30 @@ function Answers({ result }: { result: LiveResult }) {
         })}
       </div>
     </section>
+  );
+}
+
+/** Hands the recorded investigation to the workspace, where the graph, evidence browser and report render it. */
+function OpenInWorkspace({ result }: { result: LiveResult }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  return (
+    <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
+      <Button
+        icon={<ArrowUpRight strokeWidth={1.5} />}
+        loading={pending}
+        onClick={() => {
+          const id = provider.importInvestigation(result.investigation);
+          if (!id) {
+            toast({ title: "This run could not be added to the workspace" });
+            return;
+          }
+          startTransition(() => router.push(`/investigations/${id}`));
+        }}
+      >
+        Open in workspace
+      </Button>
+      <span className="text-[13px] text-ink-3">Adds this run to the investigations in this tab: graph, evidence and report.</span>
+    </div>
   );
 }
