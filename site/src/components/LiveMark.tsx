@@ -24,7 +24,6 @@ function bindActivity() {
   window.addEventListener("keydown", mark, { passive: true });
 }
 
-
 /**
  * The mark, alive. The head is masked so the eyes are real holes and the mark
  * works on any background. Eyes open, follow the pointer and blink; the head

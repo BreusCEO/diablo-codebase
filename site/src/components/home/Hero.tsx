@@ -142,7 +142,10 @@ function QuestionBox() {
   useEffect(() => {
     if (held || done) return;
     const reduce = reducedMotionNow();
-    const t = typing && !reduce ? setTimeout(() => setN(n + 1), 38 + ((n * 37) % 40)) : setTimeout(() => next(reduce), reduce ? 3600 : 2200);
+    const t =
+      typing && !reduce
+        ? setTimeout(() => setN(n + 1), 38 + ((n * 37) % 40))
+        : setTimeout(() => next(reduce), reduce ? 3600 : 2200);
     return () => clearTimeout(t);
     // `next` only reads state that is already a dependency.
     // eslint-disable-next-line react-hooks/exhaustive-deps
