@@ -63,3 +63,26 @@ test("no horizontal scroll at phone and desktop widths", async ({ browser }) => 
   }
   expect(overflow, overflow.join("\n")).toEqual([]);
 });
+
+test.describe("increased contrast", () => {
+  for (const theme of ["light", "dark"] as const) {
+    test(`axe: no violations with more contrast, ${theme}; materials turn solid`, async ({ browser }) => {
+      const ctx = await browser.newContext({ viewport: { width: 375, height: 900 }, colorScheme: theme, contrast: "more" });
+      const page = await ctx.newPage();
+      const problems: string[] = [];
+      for (const route of ROUTES) {
+        await page.goto(route);
+        await page.waitForLoadState("networkidle");
+        await scrollThrough(page);
+        if (route === "/") await expect(page.getByRole("button", { name: "Replay" })).toBeVisible({ timeout: 20_000 });
+        await settle(page);
+        const result = await new AxeBuilder({ page: page as unknown as AxePage }).withTags(TAGS).analyze();
+        for (const v of result.violations) problems.push(`${route}: ${v.id} (${v.impact}) × ${v.nodes.length}: ${v.nodes[0]?.target.join(" ")}`);
+      }
+      const blur = await page.locator("header").evaluate((el) => getComputedStyle(el).backdropFilter);
+      expect(blur).toBe("none");
+      expect(problems, problems.join("\n")).toEqual([]);
+      await ctx.close();
+    });
+  }
+});
