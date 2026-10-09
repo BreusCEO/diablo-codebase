@@ -79,7 +79,8 @@ function investigation(request: NextRequest) {
 
 export const config = {
   // Every route in the (app) group, the sign-in page, and app API routes
-  // (everything under /api except the auth endpoints themselves).
+  // (everything under /api except the auth endpoints and /api/admin, which
+  // check their own admin password cookie and same-origin requests).
   matcher: [
     "/",
     "/home/:path*",
@@ -92,6 +93,6 @@ export const config = {
     "/datasets/:path*",
     "/settings/:path*",
     "/design/:path*",
-    "/api/((?!auth/).*)",
+    "/api/((?!auth/|admin/).*)",
   ],
 };
