@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "bench": "tsx src/lib/bench/cli.ts",
     "check:release": "node scripts/check-release.mjs",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
