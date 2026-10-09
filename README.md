@@ -2,7 +2,7 @@
 
 **Diablo AI lets companies understand what is actually happening inside their AI systems: not just *that* a score moved, but *which change* moved it, and how sure they can be.**
 
-Live demo: **https://diablo.pnoia.dev** (click "Enter demo workspace"; no account needed) · Submission: [`docs/SUBMISSION.md`](docs/SUBMISSION.md) · Stage pitch: [`docs/PITCH.md`](docs/PITCH.md) · Self-assessment: [`docs/SCORECARD.md`](docs/SCORECARD.md) · Benchmark: [`docs/BENCHMARK.md`](docs/BENCHMARK.md)
+Live demo: **https://diablo.pnoia.dev** (click "Enter demo workspace"; no account needed) · Submission: [`docs/SUBMISSION.md`](docs/SUBMISSION.md) · Stage pitch: [`docs/PITCH.md`](docs/PITCH.md) · Self-assessment: [`docs/SCORECARD.md`](docs/SCORECARD.md) · Benchmark: [`docs/BENCHMARK.md`](docs/BENCHMARK.md) · Disclosure: [`docs/DISCLOSURE.md`](docs/DISCLOSURE.md) · Video (72 s): https://diabloai.pnoia.dev/demo.mp4
 
 A question such as "why did it get worse?" becomes competing hypotheses, controlled experiments, evidence and a verdict, with an effect size, a 95% confidence interval, an exact test and a validity grade, traceable to raw outputs. **The AI reasons. The system measures.** The reasoning agent proposes (a rule-based stand-in in the demo workspace; a real model on the [Live investigation](#live-investigations) page once a key is set); every number is computed from stored counts by `src/lib/stats.ts`.
 
