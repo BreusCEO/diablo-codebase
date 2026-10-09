@@ -5,12 +5,13 @@ import { useEffect, useRef, useTransition } from "react";
 import { provider } from "@/lib/data";
 import { useSession } from "@/components/auth/SessionProvider";
 import { Composer, type ComposerHandle } from "./Composer";
-import { SystemPicker, useSelectedSystem } from "./SystemPicker";
+import { InvestigatorPicker } from "./InvestigatorPicker";
+import { useSelectedSystem } from "./SystemPicker";
 
 export function Home() {
   const router = useRouter();
   const session = useSession();
-  const [system, setSystem] = useSelectedSystem();
+  const [system] = useSelectedSystem();
   const [pending, startTransition] = useTransition();
   const composer = useRef<ComposerHandle>(null);
 
@@ -58,7 +59,7 @@ export function Home() {
             const id = provider.createInvestigation(text, system);
             startTransition(() => router.push(`/investigations/${id}`));
           }}
-          left={<SystemPicker value={system} onChange={setSystem} />}
+          left={<InvestigatorPicker />}
         />
       </div>
     </>
