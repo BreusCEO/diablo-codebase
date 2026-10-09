@@ -2,7 +2,7 @@
 
 Spoken text is in plain paragraphs; stage directions are in *italics*. About 420 words, which is roughly 2 minutes 50 seconds at a calm pace.
 
-Before going on stage: open https://diablo.pnoia.dev in a fresh browser window and click **Enter demo workspace**. Keep that tab ready on **Home**. Have a second tab open at `/investigations/long-context-degradation?tab=overview` as a fallback.
+Before going on stage: open https://app.diablo.pnoia.dev in a fresh browser window and click **Enter demo workspace**. Keep that tab ready on **Home**. Have a second tab open at `/investigations/long-context-degradation?tab=overview` as a fallback.
 
 ## 0:00 Hook (20 s)
 

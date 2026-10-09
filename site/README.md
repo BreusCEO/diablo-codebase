@@ -1,7 +1,7 @@
 # Diablo AI: the public site
 
-The marketing site at https://diabloai.pnoia.dev. Its own Next.js project, separate from the app in the
-repository root (https://diablo.pnoia.dev).
+The marketing site at https://diablo.pnoia.dev. Its own Next.js project, separate from the app in the
+repository root (https://app.diablo.pnoia.dev).
 
 ```bash
 npm install

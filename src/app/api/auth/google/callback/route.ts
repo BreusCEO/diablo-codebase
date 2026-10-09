@@ -1,11 +1,19 @@
 import type { NextRequest } from "next/server";
 import { authSecret, googleConfig } from "@/lib/auth/env";
 import { AuthFlowError, checkCallback, exchangeCode, OAUTH_COOKIE, openFlow } from "@/lib/auth/google";
-import { clearFlow, originOf, redirectTo, redirectWithError, setSession } from "@/lib/auth/http";
+import { authFailure, clearFlow, originOf, redirectTo, redirectWithError, setSession } from "@/lib/auth/http";
 import { safeNext } from "@/lib/auth/next-path";
 
 /** Google sends the visitor back here with ?code&state, or with ?error. */
 export async function GET(request: NextRequest) {
+  try {
+    return await handle(request);
+  } catch (err) {
+    return authFailure(request, err);
+  }
+}
+
+async function handle(request: NextRequest) {
   const flow = await openFlow(request.cookies.get(OAUTH_COOKIE)?.value, authSecret());
   const config = googleConfig();
   // No flow can have started without Google configured.

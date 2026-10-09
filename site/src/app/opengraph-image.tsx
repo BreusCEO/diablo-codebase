@@ -27,7 +27,7 @@ export default function OpenGraphImage() {
           <div style={{ display: "flex", maxWidth: 660, fontSize: 112, lineHeight: 1, letterSpacing: "-0.045em" }}>
             {SITE.tagline}
           </div>
-          <div style={{ display: "flex", fontSize: 28, opacity: 0.72 }}>diabloai.pnoia.dev</div>
+          <div style={{ display: "flex", fontSize: 28, opacity: 0.72 }}>diablo.pnoia.dev</div>
         </div>
         <MarkSvg height={420} />
       </div>
