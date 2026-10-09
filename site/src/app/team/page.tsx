@@ -3,12 +3,14 @@ import { CtaBand } from "@/components/CtaBand";
 import { PageHero } from "@/components/PageHero";
 import { Reveal, SectionHead } from "@/components/Reveal";
 import { TryButton } from "@/components/TryButton";
+import { pageMetadata } from "@/lib/site";
 import { TEAM } from "@/lib/team";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/team",
   title: "Team",
-  description: "The people building Diablo.",
-};
+  description: "The small team building Diablo AI, and the rules we hold ourselves to.",
+});
 
 const VALUES = [
   { title: "Measure before we claim.", body: "The rule we built into Diablo applies to us too." },

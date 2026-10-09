@@ -4,11 +4,13 @@ import { PageHero } from "@/components/PageHero";
 import { Faq } from "@/components/pricing/Faq";
 import { Plans } from "@/components/pricing/Plans";
 import { SectionHead } from "@/components/Reveal";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/pricing",
   title: "Pricing",
-  description: "Diablo is free during early access. Here is what it will cost after.",
-};
+  description: "Diablo AI is free during early access. The plans we intend to offer afterwards, and answers to common questions.",
+});
 
 export default function PricingPage() {
   return (

@@ -3,11 +3,13 @@ import { Flywheel } from "@/components/about/Flywheel";
 import { CtaBand } from "@/components/CtaBand";
 import { PageHero } from "@/components/PageHero";
 import { Reveal, SectionHead } from "@/components/Reveal";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/about",
   title: "About",
-  description: "Diablo is building an intelligence whose job is to understand and improve intelligence.",
-};
+  description: "Why Diablo exists, the rules it is built on, and where it is going: from investigating AI to improving it.",
+});
 
 const CAPABILITIES = ["Evaluation", "Observability", "Research dashboards", "Coding agents"];
 
