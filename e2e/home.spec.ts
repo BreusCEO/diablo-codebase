@@ -1,17 +1,16 @@
 import { expect, test } from "@playwright/test";
 import { ask, COMPOSER, gotoHome, saved } from "./helpers";
 
-test("1. Home → type → Enter → workspace, with the chosen AI system stored", async ({ page }) => {
+test("1. Home → type → Enter → workspace; the investigator model is Claude Opus 5.5 by default", async ({ page }) => {
   await gotoHome(page);
-  await page.getByRole("button", { name: /AI system: .*Change/ }).click();
-  await page.getByRole("option", { name: /Agent Y 2\.1/ }).click();
+  await page.getByRole("button", { name: /Investigator model: Claude Opus 5\.5\. Change/ }).click();
+  await expect(page.getByRole("option", { name: /Claude Opus 5\.5/ })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Escape");
   await ask(page, "Does Agent Y make malformed tool calls when it has many tools?");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Does Agent Y make malformed tool calls");
-  await expect(page.locator("header").getByRole("link", { name: "Agent Y 2.1" })).toBeVisible();
   const ws = await saved(page);
   const id = decodeURIComponent(new URL(page.url()).pathname.split("/")[2]);
-  const inv = ws.investigations.find((i: { id: string }) => i.id === id);
-  expect(inv.systemId).toBe("agent-y-2-1");
+  expect(ws.investigations.some((i: { id: string }) => i.id === id)).toBe(true);
 });
 
 test("2. Empty Enter does nothing; Send is disabled when empty or whitespace", async ({ page }) => {
