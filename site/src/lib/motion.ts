@@ -52,6 +52,21 @@ export function nearest(points: readonly number[], x: number) {
 
 export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
+/**
+ * The reduced-motion setting, read where it is used (an effect or a handler).
+ * Never branch the rendered markup on it: the server cannot know it, so the
+ * markup must be the same either way and CSS or an effect does the rest.
+ */
+export function reducedMotionNow() {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** True when any part of the element is inside the viewport right now. */
+export function onScreen(el: Element) {
+  const r = el.getBoundingClientRect();
+  return r.bottom > 0 && r.top < window.innerHeight;
+}
+
 /** A light tap on devices that have one, only for meaningful moments (a snap, a commit). */
 export function tick() {
   try {

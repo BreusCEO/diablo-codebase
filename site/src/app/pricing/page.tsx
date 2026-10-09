@@ -4,18 +4,20 @@ import { PageHero } from "@/components/PageHero";
 import { Faq } from "@/components/pricing/Faq";
 import { Plans } from "@/components/pricing/Plans";
 import { SectionHead } from "@/components/Reveal";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
+  path: "/pricing",
   title: "Pricing",
-  description: "Diablo is free during early access. Here is what it will cost after.",
-};
+  description: "Diablo AI is free during early access. The plans we intend to offer afterwards, and answers to common questions.",
+});
 
 export default function PricingPage() {
   return (
     <>
       <PageHero eyebrow="Pricing" title="Free during early access.">
-        Here is what Diablo will cost afterwards. Experiments call your own AI system, so your provider bills the model
-        usage, and Diablo shows the estimate before anything runs.
+        Today Diablo runs on sample systems in a demo workspace, and it costs nothing. These are the plans we intend to
+        offer once you can connect your own AI.
       </PageHero>
 
       <section className="border-t">

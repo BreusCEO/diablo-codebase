@@ -25,11 +25,13 @@ export function Knowledge() {
     <section className="border-t">
       <div className="mx-auto grid max-w-6xl gap-14 px-4 py-24 sm:px-6 lg:grid-cols-2">
         <div>
-          <SectionHead eyebrow="Persistent understanding" title="Every investigation leaves knowledge behind.">
-            Diablo keeps what it found, with the evidence behind it. Over time your AI system stops being a black box.
+          <SectionHead eyebrow="Persistent understanding" title="Every investigation leaves a record.">
+            Today that record is a report you can trace down to the raw outputs. Next, Diablo keeps what it learns across
+            investigations, so your AI system stops being a black box.
           </SectionHead>
           <Reveal delay={0.06}>
-            <ul className="mt-10 flex flex-wrap gap-2">
+            <p className="t-overline mt-10 text-ink-3">What it will keep</p>
+            <ul className="mt-3 flex flex-wrap gap-2">
               {LEARNS.map((l) => (
                 <li key={l} className="t-callout rounded-full border bg-surface px-3.5 py-2 font-medium">
                   {l}
@@ -48,7 +50,7 @@ export function Knowledge() {
           <div className="rounded-[1.75rem] bg-burgundy p-6 text-cream">
             <p className="t-overline text-cream/70">Diablo</p>
             <p className="mt-3 text-[1.75rem] font-semibold leading-tight tracking-[-0.025em]">“Understand this AI.”</p>
-            <p className="t-callout mt-3 text-cream/80">Asks first, then tests, then changes.</p>
+            <p className="t-callout mt-3 text-cream/80">Asks first, then tests, then concludes.</p>
           </div>
           <div className="rounded-[1.75rem] border bg-surface p-6 sm:col-span-2">
             <p className="t-overline text-ink-3">Before any change, Diablo asks</p>

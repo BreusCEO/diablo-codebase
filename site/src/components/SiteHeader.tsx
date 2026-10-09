@@ -89,7 +89,7 @@ export function SiteHeader() {
       {/* Scroll edge: only when content is actually underneath. */}
       <div
         aria-hidden
-        className={`pointer-events-none absolute inset-x-0 top-full h-5 transition-opacity duration-300 ${under ? "opacity-100" : "opacity-0"}`}
+        className={`scroll-edge pointer-events-none absolute inset-x-0 top-full h-5 transition-opacity duration-300 ${under ? "opacity-100" : "opacity-0"}`}
         style={{
           background: "linear-gradient(var(--material), transparent)",
           WebkitBackdropFilter: "blur(6px)",

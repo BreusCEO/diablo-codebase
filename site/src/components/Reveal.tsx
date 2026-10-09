@@ -1,9 +1,17 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import { spring } from "@/lib/motion";
+import { useLayoutEffect, useRef } from "react";
+import { animate } from "motion/react";
+import { onScreen, reducedMotionNow, spring } from "@/lib/motion";
 
-/** Settles into place the first time it scrolls into view. Reduced motion: a plain fade. */
+/**
+ * Settles into place the first time it scrolls into view.
+ *
+ * The server HTML is always visible. Only blocks that are still below the
+ * fold when the page wakes up are lowered and faded out (before the browser
+ * paints again), so the first screen never flashes, and with no JavaScript or
+ * with reduced motion everything is simply there, without movement.
+ */
 export function Reveal({
   children,
   delay = 0,
@@ -15,16 +23,41 @@ export function Reveal({
   className?: string;
   as?: "div" | "li" | "section";
 }) {
-  const reduce = useReducedMotion();
-  const Tag = motion[as];
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || reducedMotionNow() || onScreen(el)) return;
+    el.style.opacity = "0";
+    el.style.transform = "translateY(20px)";
+    let shown = false;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        shown = true;
+        animate(el, { opacity: 1, transform: "translateY(0px)" }, { ...spring(1, 0.6), delay }).then(() => {
+          // Leave no transform behind: it would make a stacking context for everything inside.
+          el.style.opacity = "";
+          el.style.transform = "";
+        });
+      },
+      { rootMargin: "0px 0px -10% 0px" },
+    );
+    io.observe(el);
+    return () => {
+      io.disconnect();
+      if (!shown) {
+        el.style.opacity = "";
+        el.style.transform = "";
+      }
+    };
+  }, [delay]);
+
+  // "li" and "section" take the same props; the cast only satisfies the ref's element type.
+  const Tag = as as "div";
   return (
-    <Tag
-      className={className}
-      initial={reduce ? { opacity: 0 } : { opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-      transition={reduce ? { duration: 0.2, delay } : { ...spring(1, 0.6), delay }}
-    >
+    <Tag ref={ref} className={className}>
       {children}
     </Tag>
   );

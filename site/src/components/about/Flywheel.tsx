@@ -95,7 +95,8 @@ export function Flywheel() {
             <div key={t} className="absolute" style={{ left: `${r3(50 + Math.cos(a) * k)}%`, top: `${r3(50 + Math.sin(a) * k)}%` }}>
               <motion.span
                 style={{ rotate: upright, x: "-50%", y: "-50%" }}
-                className="t-caption absolute left-0 top-0 whitespace-nowrap rounded-full border bg-surface px-3 py-1.5 font-semibold shadow-2"
+                // On phones a label wraps onto two lines, so it never reaches the edge of the screen or the hub.
+                className="t-caption absolute left-0 top-0 w-max max-w-[6.5rem] text-balance rounded-full border bg-surface px-3 py-1.5 text-center font-semibold shadow-2 sm:max-w-none sm:whitespace-nowrap"
               >
                 {t}
               </motion.span>

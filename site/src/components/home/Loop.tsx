@@ -9,11 +9,11 @@ const STEPS = [
   { name: "Question", line: "You ask what you want to understand about your AI." },
   { name: "Hypotheses", line: "Diablo lists the possible causes, including competing ones." },
   { name: "Experiment", line: "It designs a controlled test that can tell them apart." },
-  { name: "Evidence", line: "The system runs your AI and records every result." },
+  { name: "Evidence", line: "The system runs the experiment and records every result." },
   { name: "Analysis", line: "Statistics are computed by code, never written by the model." },
   { name: "Conclusion", line: "A claim is only as strong as the evidence behind it." },
-  { name: "Knowledge", line: "What was learned is kept, with its evidence." },
-  { name: "Improvement", line: "A change is proposed, tested and verified. Then the loop runs again." },
+  { name: "Knowledge", line: "The conclusion links to its evidence, down to the raw outputs." },
+  { name: "Improvement", line: "The next experiment follows from the evidence. Then the loop runs again." },
 ];
 const N = STEPS.length;
 const STEP = 360 / N;
@@ -45,6 +45,8 @@ function Dial() {
   const upright = useTransform(rot, (v) => -v);
   const [active, setActive] = useState(0);
   const [touched, setTouched] = useState(false);
+  /** The step the dial is turning to, so quick key presses add up even mid-turn. */
+  const aim = useRef(0);
   const drag = useRef({ start: 0, last: 0, acc: 0, mode: "angle" as "angle" | "swipe", radius: 1, tracker: new Tracker() });
 
   useMotionValueEvent(rot, "change", (v) => {
@@ -54,6 +56,7 @@ function Dial() {
 
   /** Rotate to a step by the shortest way round. No momentum, so no overshoot. */
   function goTo(i: number) {
+    aim.current = mod(i, N);
     const base = -i * STEP;
     const cur = rot.get();
     const target = base + 360 * Math.round((cur - base) / 360);
@@ -111,6 +114,7 @@ function Dial() {
       const v = drag.current.tracker.velocity().vx;
       const rest = rot.get() + project(v, 0.99);
       const target = Math.round(rest / STEP) * STEP;
+      aim.current = indexAt(target);
       animate(rot, target, reduce ? INSTANT : { ...ROTATE, velocity: v });
       if (indexAt(target) !== before || Math.abs(v) > 60) tick();
     },
@@ -121,7 +125,8 @@ function Dial() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-[34rem]">
+    // On phones the dial sits a little in from the edges, so the step labels on its rim never leave the screen.
+    <div className="mx-auto w-full max-w-[34rem] px-4 sm:px-0">
       <div
         ref={box}
         role="slider"
@@ -132,12 +137,15 @@ function Dial() {
         aria-valuenow={active + 1}
         aria-valuetext={`${STEPS[active].name}: ${STEPS[active].line}`}
         onPointerDown={onPointerDown}
+        // Someone reading it with the keyboard or a screen reader should not have it turn under them.
+        onFocus={() => setTouched(true)}
         onKeyDown={(e) => {
           const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
           if (step) {
             e.preventDefault();
             setTouched(true);
-            goTo(active + step);
+            // Mid-turn, count from where it is headed; the new spring starts from where it is.
+            goTo((rot.isAnimating() ? aim.current : active) + step);
           } else if (e.key === "Home" || e.key === "End") {
             e.preventDefault();
             setTouched(true);
@@ -213,7 +221,14 @@ function Dial() {
           </AnimatePresence>
         </div>
       </div>
-      <p className="t-callout mt-6 text-center text-ink-2 sm:hidden">{STEPS[active].line}</p>
+      {/* All the lines share one cell, so this is always as tall as the longest and the page never jumps as the dial turns. */}
+      <div className="t-callout mt-6 grid text-center text-ink-2 sm:hidden">
+        {STEPS.map((s, i) => (
+          <p key={s.name} aria-hidden={i !== active} className={`col-start-1 row-start-1 ${i === active ? "" : "invisible"}`}>
+            {s.line}
+          </p>
+        ))}
+      </div>
       <p className="t-caption mt-3 text-center text-ink-3">Drag to turn · arrow keys work too</p>
     </div>
   );
