@@ -25,15 +25,19 @@ export function Home() {
 
   return (
     <>
-      {/* A soft burgundy-to-black glow at the bottom: translucent, blurred, no hard edge. */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[60vh] overflow-hidden">
+      {/* A wide burgundy glow centred behind the question, fading out to dark edges. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <div
-          className="absolute -bottom-[30%] left-1/2 h-[90%] w-[110%] -translate-x-1/2 rounded-[50%] blur-[80px]"
-          style={{ background: "radial-gradient(closest-side, rgb(87 0 26 / 0.42), rgb(87 0 26 / 0.18) 55%, transparent)" }}
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 62% 58% at 50% 46%, rgb(122 10 46 / 0.55) 0%, rgb(87 0 26 / 0.38) 32%, rgb(87 0 26 / 0.14) 58%, transparent 78%)",
+          }}
         />
+        {/* Dark mode: the edges sink into near-black. */}
         <div
-          className="absolute inset-x-0 bottom-0 h-[45%]"
-          style={{ background: "linear-gradient(to bottom, transparent, rgb(20 4 9 / 0.22))" }}
+          className="absolute inset-0 hidden dark:block"
+          style={{ background: "radial-gradient(ellipse 80% 75% at 50% 46%, transparent 55%, rgb(6 2 4 / 0.7) 100%)" }}
         />
       </div>
       <div className="relative mx-auto flex min-h-full w-full max-w-[720px] flex-col px-4 pb-8 pt-[clamp(48px,18vh,168px)] sm:px-6">
