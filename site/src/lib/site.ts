@@ -6,7 +6,7 @@ export const SITE = {
   company: "Diablo AI",
   tagline: "AI that evolves AI.",
   description:
-    "Diablo investigates AI systems: it forms hypotheses, runs controlled experiments and turns what it finds into knowledge you can trust.",
+    "Diablo AI shows companies what is actually happening inside their AI systems: which change moved a score, and how sure they can be.",
 } as const;
 
 /** Named for what is behind them. The mark is the way home. */

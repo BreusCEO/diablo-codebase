@@ -26,8 +26,8 @@ export function Hero() {
             AI that evolves <span className="text-accent-text">AI.</span>
           </h1>
           <p className="rise t-lead mt-7 max-w-xl text-pretty text-ink-2" style={delay(0.14)}>
-            Give Diablo an AI system and a question. It forms hypotheses, runs controlled experiments and turns what it
-            finds into knowledge you can trust.
+            Diablo AI shows companies what is actually happening inside their AI systems: not just that a score moved, but
+            which change moved it, and how sure they can be.
           </p>
           <div className="rise mt-9 flex flex-wrap items-center gap-3" style={delay(0.22)}>
             <TryButton size="lg" />
