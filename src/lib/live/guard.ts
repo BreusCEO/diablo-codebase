@@ -7,14 +7,14 @@
  * - one run at a time per session, and a cooldown after each run;
  * - at most `maxConcurrentRuns` runs at once on the instance;
  * - a daily call cap (UTC day): a run reserves its worst-case call count up
- *   front and gives back what it did not use when it ends.
+ *   front; when it ends, the reservation is replaced by the calls it made.
  */
 import type { AbuseLimits } from "./types";
 
 export type Refusal = { ok: false; code: "busy" | "cooldown" | "server-busy" | "daily-cap"; message: string; retryAfterSeconds: number };
 export interface Lease {
   ok: true;
-  /** Ends the run: frees the slots and keeps only the calls actually made against today's cap. */
+  /** Ends the run: frees the slots and counts the calls actually made against today's cap. */
   release(callsUsed: number, now?: number): void;
 }
 
@@ -80,8 +80,9 @@ export class LiveGuard {
         this.active.delete(sessionKey);
         const t = at;
         this.lastEnded.set(sessionKey, t);
-        // Give back the unused part of the reservation, if the day has not rolled over meanwhile.
-        if (this.day === day) this.used = Math.max(0, this.used - Math.max(0, reserveCalls - Math.max(0, callsUsed)));
+        // Replace the reservation with the calls actually made (fewer, or a few more after rate-limit
+        // retries), if the day has not rolled over meanwhile.
+        if (this.day === day) this.used = Math.max(0, this.used - reserveCalls + Math.max(0, callsUsed));
         // Keep the cooldown map small.
         if (this.lastEnded.size > 1000) {
           for (const [k, v] of this.lastEnded) if (t - v > limits.cooldownMs) this.lastEnded.delete(k);

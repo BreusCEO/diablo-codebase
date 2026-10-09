@@ -44,6 +44,13 @@ describe("live guard (in-memory abuse controls)", () => {
     expect(g.acquire("b", 10, Date.parse("2026-10-10T00:00:01Z")).ok).toBe(true);
   });
 
+  it("counts calls beyond the reservation (rate-limit retries) against the cap", () => {
+    const g = new LiveGuard(() => limits);
+    const a = g.acquire("a", 100, T);
+    if (a.ok) a.release(130, T);
+    expect(g.usedToday(T)).toBe(130);
+  });
+
   it("releasing twice changes nothing", () => {
     const g = new LiveGuard(() => limits);
     const a = g.acquire("a", 100, T);

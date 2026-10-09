@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { analyzeExperiment, holmAdjusted, verdictFor } from "@/lib/data/derive";
+import { analyzeExperiment, holmAdjusted, isLiveInvestigation, verdictFor } from "@/lib/data/derive";
+import { seedInvestigations } from "@/lib/data/mock/fixtures";
 import { investigationSchema } from "@/lib/data/schema";
 import { CREATED_ID } from "@/lib/slug";
 import { mcnemarExact } from "@/lib/stats";
@@ -96,6 +97,13 @@ describe("live investigation, end to end with fakes", () => {
     expect(e2.effectFound).toBe(false);
     expect(verdictFor(inv, inv.hypotheses[0]).verdict).toBe("supported");
     expect(verdictFor(inv, inv.hypotheses[1]).verdict).toBe("rejected");
+  });
+
+  it("is recognised as live (never simulated); the demo's seeded investigations are not", async () => {
+    const { result } = await run(reasoner([groundedConclusion]));
+    expect(isLiveInvestigation(result.investigation)).toBe(true);
+    expect(result.investigation.experiments.every((e) => e.simulation === null)).toBe(true);
+    for (const inv of seedInvestigations(Date.parse("2026-10-07T12:00:00Z"))) expect(isLiveInvestigation(inv)).toBe(false);
   });
 
   it("publishes the model's conclusion only with numbers from the fact table", async () => {

@@ -11,10 +11,15 @@
  *   (timeout, network, unreadable answer) leaves its pair out; it is never
  *   scored as wrong. Fatal provider errors (bad key, unknown model, quota) stop
  *   the run at once.
+ * - A rate limit that outlasts the adapter's own retries pauses the whole pool
+ *   (as long as the provider asked, at most a minute) and puts the call back in
+ *   the queue, up to three times. It is not a failure: on a free tier the run
+ *   simply slows down, and the deadline decides how many pairs finish.
  */
 import type { LiveCaps } from "./budget";
 import type { Item } from "./dataset";
 import { LiveError } from "./errors";
+import { sleep } from "./llm/http";
 import { isFatal, LLMError, type LLM, type LLMErrorKind, type LLMUsage } from "./llm/types";
 import { settingsKey, targetRequest, type Settings } from "./registry";
 import { scoreReply } from "./scorer";
@@ -81,7 +86,14 @@ interface Task {
   key: string;
   settings: Settings;
   item: Item;
+  /** Times this call went back in the queue after a rate limit. */
+  requeues?: number;
 }
+
+export const MAX_REQUEUES = 3;
+/** Pause when the provider rate-limits without saying for how long (ms); never longer than a minute. */
+const DEFAULT_PAUSE_MS = 5000;
+const MAX_PAUSE_MS = 60_000;
 
 const callKey = (s: Settings, item: Item) => `${settingsKey(s)}|${item.id}`;
 
@@ -143,7 +155,10 @@ export async function runPaired({ target, plan, items, caps, signal, now = Date.
     onProgress?.({ ...progress }, { ...usage });
   };
 
+  let pauseUntil = 0;
   const runTask = async (t: Task) => {
+    const wait = pauseUntil - now();
+    if (wait > 0) await sleep(wait, callSignal).catch(() => {});
     const base = { key: t.key, settings: t.settings, item: t.item, parsed: null, score: null, rationale: null, finishReason: null, model: null };
     const zero = { inputTokens: 0, outputTokens: 0 };
     if (callSignal.aborted) {
@@ -175,6 +190,12 @@ export async function runPaired({ target, plan, items, caps, signal, now = Date.
       const kind: LLMErrorKind = e instanceof LLMError ? e.kind : "bad-response";
       const message = e instanceof Error ? e.message : "Unknown error";
       const cancelled = kind === "aborted" || callSignal.aborted;
+      if (kind === "rate-limit" && !cancelled && (t.requeues ?? 0) < MAX_REQUEUES) {
+        const ms = Math.min(MAX_PAUSE_MS, (e as LLMError).retryAfterMs ?? DEFAULT_PAUSE_MS);
+        pauseUntil = Math.max(pauseUntil, now() + ms);
+        tasks.push({ ...t, requeues: (t.requeues ?? 0) + 1 });
+        return;
+      }
       record({ ...base, status: cancelled ? "cancelled" : "failed", response: "", error: message, errorKind: kind, usage: zero, durationMs: now() - t0 });
       if (isFatal(e)) {
         fatal ??= e;

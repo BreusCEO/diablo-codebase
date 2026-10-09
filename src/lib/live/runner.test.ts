@@ -107,6 +107,38 @@ describe("paired runner", () => {
     expect(out.experiments[0].counts).toEqual({ control: { k: 39, n: 39 }, treatment: { k: 39, n: 39 } });
   });
 
+  it("a rate limit pauses the pool and re-queues the call instead of failing it", async () => {
+    let limited = 0;
+    const target = fakeTarget(answers, () => 1, {
+      failWhen: (req) => {
+        // The first three calls on item A002 are rate-limited, then it goes through.
+        if (req.messages[0].content === items[1].prompt && limited < 3) {
+          limited++;
+          return new LLMError("rate-limit", "slow down", { provider: "fake", retryAfterMs: 5 });
+        }
+        return null;
+      },
+    });
+    const out = await runPaired({ target, plan: [E1], items, caps });
+    expect(limited).toBe(3);
+    expect(out.calls).toMatchObject({ done: 80, total: 80, scored: 80, failed: 0 });
+    expect(out.experiments[0].pairs).toHaveLength(40);
+  });
+
+  it("a call still rate-limited after its re-queues fails, and only its pair is left out", async () => {
+    const target = fakeTarget(answers, () => 1, {
+      failWhen: (req) =>
+        req.messages[0].content === items[0].prompt && req.system.startsWith("You are Helper. Be brief")
+          ? new LLMError("rate-limit", "slow down", { provider: "fake", retryAfterMs: 1 })
+          : null,
+    });
+    const out = await runPaired({ target, plan: [E1], items, caps });
+    expect(out.calls.failed).toBe(1);
+    expect(out.experiments[0].pairs).toHaveLength(39);
+    // One first try plus MAX_REQUEUES more.
+    expect(target.calls.filter((r) => r.messages[0].content === items[0].prompt && r.system.startsWith("You are Helper. Be brief"))).toHaveLength(4);
+  });
+
   it("stops at once on a fatal provider error (bad key)", async () => {
     const target = fakeTarget(answers, () => 1, { failWhen: (_, i) => (i === 5 ? new LLMError("auth", "bad key", { provider: "fake" }) : null) });
     const err = await runPaired({ target, plan: [E1, E2], items, caps }).catch((e) => e);
