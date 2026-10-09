@@ -110,7 +110,7 @@ test("11. Corrupt sessionStorage gives a recovery banner and no crash", async ({
   await page.reload();
   const banner = page.getByRole("alert").filter({ hasText: "could not be read" });
   await expect(banner).toBeVisible();
-  await expect(page.getByRole("list", { name: "Recent investigations" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Describe what you want to find out about an AI system" })).toBeVisible();
   await page.getByRole("button", { name: "Dismiss" }).click();
   await expect(banner).toHaveCount(0);
 });
@@ -185,7 +185,7 @@ test("15. Idle on Home with nothing running: no storage writes, no animation", a
   await page.getByRole("dialog").getByRole("button", { name: "Delete" }).click();
   await page.waitForTimeout(500);
   await page.reload();
-  await expect(page.getByRole("list", { name: "Recent investigations" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Describe what you want to find out about an AI system" })).toBeVisible();
   await page.evaluate(() => {
     const w = window as unknown as { writes: number };
     w.writes = 0;
