@@ -431,13 +431,8 @@ function NotConfigured({ config }: { config: LivePublicConfig }) {
   );
 }
 
-/** What the browser asks for: the question from Home, and Gemini if a team member switched it on in Settings (the server decides). */
-function runRequest(): { reasoner?: "gemini"; objective?: string } {
-  const out: { reasoner?: "gemini"; objective?: string } = {};
-  try {
-    if (localStorage.getItem("diablo.reasoner") === "gemini") out.reasoner = "gemini";
-  } catch {}
+/** What the browser sends: the question from Home, if any. The investigator model is the system-wide setting. */
+function runRequest(): { objective?: string } {
   const q = new URLSearchParams(window.location.search).get("q");
-  if (q) out.objective = q.slice(0, 400);
-  return out;
+  return q ? { objective: q.slice(0, 400) } : {};
 }

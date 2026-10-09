@@ -6,7 +6,7 @@ import { maxCalls } from "@/lib/live/budget";
 import { emptyUsage, investigate } from "@/lib/live/investigate";
 import { createModels } from "@/lib/live/llm";
 import { liveGuard, sessionKey } from "@/lib/live/server";
-import { configFor, type Reasoner } from "@/lib/live/team";
+import { currentConfig } from "@/lib/live/team";
 import type { LiveEvent } from "@/lib/live/types";
 import { shortId } from "@/lib/slug";
 
@@ -34,17 +34,16 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return problem(401, "unauthenticated", "Sign in to run a live investigation.");
 
-  // Body: { reasoner?: "gemini", objective?: string }. Claude unless a team member asked for Gemini.
-  let body: { reasoner?: unknown; objective?: unknown } = {};
+  // Body: { objective?: string }. The reasoner is the system-wide setting from /admin.
+  let body: { objective?: unknown } = {};
   try {
     const parsed = (await request.json()) as unknown;
     if (parsed && typeof parsed === "object") body = parsed as typeof body;
   } catch {
     // An empty or invalid body means the defaults.
   }
-  const wanted: Reasoner | undefined = body.reasoner === "gemini" ? "gemini" : undefined;
   const objective = typeof body.objective === "string" ? body.objective : undefined;
-  const config = configFor(session.user.email, wanted);
+  const config = await currentConfig();
   const models = createModels(config);
   if (!config.provider || !models) {
     return problem(503, "not_configured", config.problem ?? "Live runs need a model key: set ANTHROPIC_API_KEY (or GEMINI_API_KEY, ZAI_API_KEY) on the server.");

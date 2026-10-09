@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import { bootScript } from "@/lib/boot";
 import { BRAND } from "@/lib/brand";
 import { Providers } from "@/components/Providers";
+import { AdminShortcut } from "@/components/admin/AdminShortcut";
 import "./globals.css";
 
 // Self-hosted so the build never needs the network (fonts are OFL; licences sit next to the files).
@@ -53,7 +54,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: bootScript }} />
       </head>
       <body className="min-h-dvh">
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <AdminShortcut />
+        </Providers>
       </body>
     </html>
   );

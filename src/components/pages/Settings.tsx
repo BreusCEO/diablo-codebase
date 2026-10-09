@@ -7,7 +7,6 @@ import { downloadText } from "@/components/charts/ChartFrame";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Segmented } from "@/components/ui/Segmented";
-import { ReasonerSetting } from "./ReasonerSetting";
 import { BRAND } from "@/lib/brand";
 import { provider } from "@/lib/data";
 import { setMotionPref, setThemePref, useMotionPref, useThemePref, type MotionPref, type ThemePref } from "@/lib/prefs";
@@ -70,8 +69,6 @@ export function SettingsPage() {
           />
         </Row>
       </section>
-
-      <ReasonerSetting Row={Row} />
 
       <section aria-labelledby="s-data" className="mt-8">
         <h2 id="s-data" className="text-[14px] font-medium text-ink-2">

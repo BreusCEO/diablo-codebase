@@ -3,9 +3,7 @@ import { ask, COMPOSER, gotoHome, saved } from "./helpers";
 
 test("1. Home → type → Enter → workspace; the investigator model is Claude Opus 5.5 by default", async ({ page }) => {
   await gotoHome(page);
-  await page.getByRole("button", { name: /Investigator model: Claude Opus 5\.5\. Change/ }).click();
-  await expect(page.getByRole("option", { name: /Claude Opus 5\.5/ })).toHaveAttribute("aria-selected", "true");
-  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("Investigator model: Claude Opus 5.5")).toBeVisible();
   await ask(page, "Does Agent Y make malformed tool calls when it has many tools?");
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Does Agent Y make malformed tool calls");
   const ws = await saved(page);
