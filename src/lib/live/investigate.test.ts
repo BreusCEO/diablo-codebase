@@ -156,6 +156,26 @@ describe("live investigation, end to end with fakes", () => {
     expect(events.some((e) => e.type === "plan" || e.type === "result")).toBe(false);
   });
 
+  it("keeps inside the route's time budget: slow planning shortens the run, which analyses what finished", async () => {
+    const base = Date.now();
+    let offset = 0;
+    const reasoning = new FakeLLM("fake-reasoner", (req) => {
+      if (isDraft(req)) {
+        offset = 260_000; // planning "took" 260 s of the 285 s budget
+        return JSON.stringify(GOOD_PLAN);
+      }
+      return groundedConclusion(req);
+    });
+    const target = fakeTarget(answers, accuracy, { delayMs: 40 });
+    const result = await investigate({ reasoning, target, models, caps, id: ID, now: () => base + offset + (Date.now() - base) });
+    expect(result.run.deadlineHit).toBe(true);
+    expect(result.run.cancelled).toBeGreaterThan(0);
+    expect(result.run.perExperiment.every((e) => e.completedPairs < e.plannedPairs)).toBe(true);
+    // The interpretation still ran, with a shortened timeout.
+    expect(reasoning.calls.at(-1)!.timeoutMs).toBeLessThanOrEqual(12_500);
+    expect(result.conclusion.source).toBe("model");
+  });
+
   it("reports a fatal provider error from the run stage", async () => {
     const target = fakeTarget(answers, accuracy, { failWhen: () => new LLMError("quota", "Daily quota used up", { provider: "fake" }) });
     const events: LiveEvent[] = [];

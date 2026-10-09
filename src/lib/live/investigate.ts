@@ -30,6 +30,14 @@ export interface InvestigateOptions {
   usage?: Usage;
 }
 
+/**
+ * Everything must finish inside the route's maxDuration (300 s). The run
+ * stage's deadline is cut short when planning took long, leaving room to
+ * interpret; interpretation calls get at most half of what is left.
+ */
+export const TOTAL_BUDGET_MS = 285_000;
+const INTERPRET_RESERVE_MS = 45_000;
+
 const emptyStage = () => ({ calls: 0, inputTokens: 0, outputTokens: 0 });
 
 export function emptyUsage(): Usage {
@@ -63,6 +71,7 @@ export async function investigate(opts: InvestigateOptions): Promise<LiveResult>
   const reasoningInterpret = metered(opts.reasoning, usage, "interpret");
   const target = metered(opts.target, usage, "run");
   const startedAt = now();
+  const remaining = () => startedAt + TOTAL_BUDGET_MS - now();
   let stage: LiveStage | null = null;
   const enter = (s: LiveStage) => {
     stage = s;
@@ -89,7 +98,7 @@ export async function investigate(opts: InvestigateOptions): Promise<LiveResult>
       target,
       plan: plan.experiments,
       items,
-      caps: opts.caps,
+      caps: { ...opts.caps, runDeadlineMs: Math.max(1000, Math.min(opts.caps.runDeadlineMs, remaining() - INTERPRET_RESERVE_MS)) },
       signal: opts.signal,
       now,
       onProgress: (progress) => emit({ type: "progress", progress, usage: structuredClone(usage) }),
@@ -111,7 +120,7 @@ export async function investigate(opts: InvestigateOptions): Promise<LiveResult>
       inv,
       plan,
       analysis,
-      caps: opts.caps,
+      caps: { ...opts.caps, reasoningTimeoutMs: Math.max(5000, Math.min(opts.caps.reasoningTimeoutMs, Math.floor(remaining() / 2))) },
       signal: opts.signal,
       onAttempt: (attempt, ok, problems) => emit({ type: "interpret-attempt", attempt, ok, problems }),
     });
