@@ -54,7 +54,7 @@ How it fits together:
 
 | Path | Role |
 | --- | --- |
-| `src/proxy.ts` | Verifies the cookie for every workspace route and app API route; redirects to `/` with `?next=`; sends signed-in visitors on `/` on to `?next=` or `/home`; deletes a cookie that fails verification |
+| `src/proxy.ts` | Verifies the cookie for every workspace route and app API route; redirects to `/` with `?next=`; sends signed-in visitors on `/` on to `?next=` or `/home`; deletes a cookie that fails verification; refuses state-changing app API requests (not GET/HEAD/OPTIONS) from any other origin |
 | `src/app/(app)/layout.tsx` | Starts the server-side session read (`getSession()`), hands the promise to `SessionProvider`, and redirects again if it is missing (defence in depth) |
 | `src/lib/auth/` | `env` (the only env reads), `session` (sign/verify), `google` (PKCE flow), `dal` (`getSession()`), `http` (cookies, same-origin check), `next-path` (open-redirect guard) |
 | `src/app/api/auth/*` | `GET google`, `GET google/callback`, `POST demo`, `POST signout` (POSTs require a same-origin `Origin`) |

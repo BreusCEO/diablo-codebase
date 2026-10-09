@@ -187,6 +187,15 @@ test.describe("signed in", () => {
     await page.waitForURL("**/home");
   });
 
+  test("App API writes from another origin are refused, even signed in", async ({ page, baseURL }) => {
+    await page.goto("/home");
+    const evil = await page.request.post("/api/no-such-route", { headers: { Origin: "https://evil.example" }, maxRedirects: 0 });
+    expect(evil.status()).toBe(403);
+    // Same origin, signed in: the proxy lets it through to routing (here, a 404).
+    const same = await page.request.post("/api/no-such-route", { headers: { Origin: new URL(baseURL!).origin }, maxRedirects: 0 });
+    expect(same.status()).toBe(404);
+  });
+
   test("Sign out returns to / and closes the workspace", async ({ browser }) => {
     // Its own session, so signing out cannot affect the shared one.
     const ctx = await browser.newContext({ storageState: signedOut });
