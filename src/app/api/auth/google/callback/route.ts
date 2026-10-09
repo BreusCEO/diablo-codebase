@@ -8,7 +8,7 @@ import { safeNext } from "@/lib/auth/next-path";
 export async function GET(request: NextRequest) {
   const flow = await openFlow(request.cookies.get(OAUTH_COOKIE)?.value, authSecret());
   const config = googleConfig();
-  // The flow cookie is single-use, whatever the outcome.
+  // No flow can have started without Google configured.
   if (!config) return clearFlow(redirectWithError(request, "google_unavailable"));
 
   try {
@@ -25,6 +25,10 @@ export async function GET(request: NextRequest) {
     if (code === "exchange_failed" || code === "server_error") {
       console.error("[auth] Google callback failed:", err instanceof Error ? err.message : "unknown error");
     }
-    return clearFlow(redirectWithError(request, code, flow ? safeNext(flow.next) : undefined));
+    const res = redirectWithError(request, code, flow ? safeNext(flow.next) : undefined);
+    // The flow cookie is single-use once this flow's own answer arrives, whatever
+    // the outcome. A callback without its state is someone else's link: clearing
+    // the cookie for it would let any site cancel a sign-in in progress.
+    return code === "state_mismatch" ? res : clearFlow(res);
   }
 }

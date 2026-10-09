@@ -125,10 +125,12 @@ test.describe("signed out", () => {
   });
 
   test("A failed callback shows an inline error on the sign-in page", async ({ page }) => {
-    await page.goto("/api/auth/google/callback?error=access_denied&state=x");
+    await page.goto("/api/auth/google/callback?error=access_denied");
     expect(new URL(page.url()).pathname).toBe("/");
-    // Without Google configured the callback refuses outright; with it, Google's own error is named.
-    await expect(page.locator("main [role=alert]")).toBeVisible();
+    // Google is not configured on the test server, so the callback refuses outright. With it
+    // configured, an ?error= without the flow's state is state_mismatch and Google's own error
+    // is named only for the flow's state (src/lib/auth/routes.test.ts covers both).
+    await expect(page.locator("main [role=alert]")).toContainText("Google sign-in isn't set up");
     await page.goto("/?error=state_mismatch");
     await expect(page.locator("main [role=alert]")).toContainText("expired");
   });
