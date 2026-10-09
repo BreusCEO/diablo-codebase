@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useTransition } from "react";
 import { provider } from "@/lib/data";
+import { useSession } from "@/components/auth/SessionProvider";
 import { Composer, type ComposerHandle } from "./Composer";
 import { SystemPicker, useSelectedSystem } from "./SystemPicker";
 import { LEGAL } from "@/components/shell/nav";
 
 export function Home() {
   const router = useRouter();
+  const session = useSession();
   const [system, setSystem] = useSelectedSystem();
   const [pending, startTransition] = useTransition();
   const composer = useRef<ComposerHandle>(null);
@@ -36,6 +38,11 @@ export function Home() {
         placeholder="Describe what you want to find out about an AI system…"
         pending={pending}
         onSubmit={(text) => {
+          // A real workspace runs the real engine; the demo workspace keeps its labelled sample flow.
+          if (session && !session.demo) {
+            startTransition(() => router.push(`/live?q=${encodeURIComponent(text.slice(0, 400))}`));
+            return;
+          }
           const id = provider.createInvestigation(text, system);
           startTransition(() => router.push(`/investigations/${id}`));
         }}

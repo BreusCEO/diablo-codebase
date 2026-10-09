@@ -32,6 +32,7 @@ export const SCORER = {
 
 /** The family the target's model belongs to, for check C4. */
 export function familyOfModel(model: string): string {
+  if (/^claude/i.test(model)) return "Claude";
   if (/^gemini/i.test(model)) return "Gemini";
   if (/^glm/i.test(model)) return "GLM";
   return model.split(/[-_.]/)[0] || model;

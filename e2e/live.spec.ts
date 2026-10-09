@@ -14,7 +14,8 @@ test("Signed in, /live explains the planted change and says plainly that it need
   await expect(page.getByRole("list", { name: "Helper versions" }).getByRole("listitem")).toHaveCount(2);
   await expect(page.getByRole("heading", { name: "Live runs need a model key" })).toBeVisible();
   await expect(page.getByText("nothing on this page is simulated")).toBeVisible();
-  await expect(page.getByRole("link", { name: /aistudio\.google\.com/ })).toHaveAttribute("href", "https://aistudio.google.com/apikey");
+  await expect(page.getByRole("link", { name: /platform\.claude\.com/ })).toHaveAttribute("href", "https://platform.claude.com/settings/keys");
+  await expect(page.getByText("ANTHROPIC_API_KEY", { exact: true })).toBeVisible();
   await expect(page.getByText("one run makes at most 165 model calls")).toBeVisible();
   const run = page.getByRole("button", { name: /Run live investigation/ });
   await expect(run).toHaveAttribute("aria-disabled", "true");
@@ -29,7 +30,7 @@ test("The run API refuses without a key (503), cross-site (403) and without a me
   expect(ok.headers()["cache-control"]).toContain("no-store");
   const body = await ok.json();
   expect(body.error).toBe("not_configured");
-  expect(body.message).toMatch(/GEMINI_API_KEY/);
+  expect(body.message).toMatch(/ANTHROPIC_API_KEY/);
 
   const cross = await page.request.post("/api/live/run", { headers: { Origin: "https://evil.example" }, data: "{}" });
   expect(cross.status()).toBe(403);

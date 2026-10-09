@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CAP_LIMITS, maxCalls } from "./budget";
-import { liveConfig, providerKey, publicConfig } from "./env";
-import { DEFAULT_MODELS } from "./providers";
+import { anthropicWorkspace, liveConfig, providerKey, publicConfig } from "./env";
+import { claudeAcceptsEffort, claudeRejectsTemperature, DEFAULT_MODELS } from "./providers";
 
 describe("live env: provider pick", () => {
   it("is not configured without a key (not a misconfiguration, so no problem text)", () => {
@@ -14,6 +14,24 @@ describe("live env: provider pick", () => {
     expect(liveConfig({ GEMINI_API_KEY: "g" }).provider).toBe("gemini");
     expect(liveConfig({ ZAI_API_KEY: "z" }).provider).toBe("zai");
     expect(liveConfig({ GEMINI_API_KEY: "g", ZAI_API_KEY: "z" }).provider).toBe("gemini");
+  });
+
+  it("prefers the Claude key over Gemini and Z.ai when several are set", () => {
+    expect(liveConfig({ ANTHROPIC_API_KEY: "a" }).provider).toBe("anthropic");
+    expect(liveConfig({ ANTHROPIC_API_KEY: "a", GEMINI_API_KEY: "g", ZAI_API_KEY: "z" }).provider).toBe("anthropic");
+    expect(liveConfig({ ANTHROPIC_API_KEY: "a", ZAI_API_KEY: "z" }).provider).toBe("anthropic");
+    expect(liveConfig({ ANTHROPIC_API_KEY: "  ", GEMINI_API_KEY: "g" }).provider).toBe("gemini");
+  });
+
+  it("DIABLO_LLM=anthropic|gemini|zai chooses whatever else is set", () => {
+    const all = { ANTHROPIC_API_KEY: "a", GEMINI_API_KEY: "g", ZAI_API_KEY: "z" };
+    expect(liveConfig({ ...all, DIABLO_LLM: "gemini" }).provider).toBe("gemini");
+    expect(liveConfig({ ...all, DIABLO_LLM: "ZAI" }).provider).toBe("zai");
+    expect(liveConfig({ GEMINI_API_KEY: "g", ANTHROPIC_API_KEY: "a", DIABLO_LLM: "anthropic" }).provider).toBe("anthropic");
+    const missing = liveConfig({ DIABLO_LLM: "anthropic", GEMINI_API_KEY: "g" });
+    expect(missing.provider).toBeNull();
+    expect(missing.problem).toMatch(/ANTHROPIC_API_KEY/);
+    expect(liveConfig({ DIABLO_LLM: "claude", ANTHROPIC_API_KEY: "a" }).problem).toMatch(/"anthropic", "gemini", "zai"/);
   });
 
   it("DIABLO_LLM chooses, and needs that provider's key", () => {
@@ -32,6 +50,64 @@ describe("live env: provider pick", () => {
     const bad = liveConfig({ GEMINI_API_KEY: "g", DIABLO_REASONING_MODEL: "../../v1/files" });
     expect(bad.provider).toBeNull();
     expect(bad.problem).toMatch(/DIABLO_REASONING_MODEL/);
+  });
+});
+
+describe("live env: Claude", () => {
+  it("defaults to Claude Opus 5.5 for reasoning and Claude Haiku 4.5 as the system under test", () => {
+    const c = liveConfig({ ANTHROPIC_API_KEY: "a" });
+    expect(DEFAULT_MODELS.anthropic).toEqual({ reasoning: "claude-opus-5-5", target: "claude-haiku-4-5" });
+    expect([c.reasoningModel, c.targetModel]).toEqual(["claude-opus-5-5", "claude-haiku-4-5"]);
+    expect(c.problem).toBeNull();
+    const o = liveConfig({ ANTHROPIC_API_KEY: "a", DIABLO_REASONING_MODEL: "claude-sonnet-5-5", DIABLO_TARGET_MODEL: "claude-sonnet-4-6" });
+    expect([o.provider, o.reasoningModel, o.targetModel]).toEqual(["anthropic", "claude-sonnet-5-5", "claude-sonnet-4-6"]);
+  });
+
+  it("refuses a target that cannot take the scenario's temperature 0.2, and says which to use", () => {
+    for (const target of ["claude-haiku-5-5", "claude-opus-5-5", "claude-sonnet-5", "claude-opus-4-7"]) {
+      const c = liveConfig({ ANTHROPIC_API_KEY: "a", DIABLO_TARGET_MODEL: target });
+      expect(c.provider).toBeNull();
+      expect(c.problem).toContain(`${target} accepts no temperature other than 1`);
+      expect(c.problem).toContain("claude-haiku-4-5");
+    }
+    // The reasoning model is never sent a temperature, so Opus 5.5 is fine there; other providers are not checked.
+    expect(liveConfig({ ANTHROPIC_API_KEY: "a", DIABLO_REASONING_MODEL: "claude-fable-5-1" }).provider).toBe("anthropic");
+    expect(liveConfig({ GEMINI_API_KEY: "g", DIABLO_TARGET_MODEL: "claude-haiku-5-5" }).provider).toBe("gemini");
+  });
+
+  it("knows which Claude models reject a non-default temperature (Claude 4.7 and later, Mythos)", () => {
+    for (const id of ["claude-opus-5-5", "claude-haiku-5-5", "claude-sonnet-5-5", "claude-sonnet-5", "claude-opus-5", "claude-opus-4-8", "claude-opus-4-7", "claude-fable-5-1", "claude-mythos-preview"]) {
+      expect(claudeRejectsTemperature(id), id).toBe(true);
+    }
+    for (const id of ["claude-haiku-4-5", "claude-haiku-4-5-20251001", "claude-sonnet-4-6", "claude-opus-4-6", "claude-opus-4-5-20251101", "gemini-3.8-flash", "something-else"]) {
+      expect(claudeRejectsTemperature(id), id).toBe(false);
+    }
+  });
+
+  it("knows which Claude models take output_config.effort (Opus 4.5+, Sonnet 4.6+, Haiku 5.5, Fable, Mythos; not Haiku 4.5)", () => {
+    for (const id of ["claude-opus-5-5", "claude-opus-4-5-20251101", "claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-1", "claude-mythos-5-1"]) {
+      expect(claudeAcceptsEffort(id), id).toBe(true);
+    }
+    for (const id of ["claude-haiku-4-5", "claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929", "claude-opus-4-1-20250805", "gemini-3.8-flash", "something-else"]) {
+      expect(claudeAcceptsEffort(id), id).toBe(false);
+    }
+  });
+
+  it("passes a valid ANTHROPIC_WORKSPACE_ID on and refuses a malformed one", () => {
+    expect(anthropicWorkspace({ ANTHROPIC_WORKSPACE_ID: "wrkspc_01JwQvzr7rXLA5AGx3HKfFUJ" })).toBe("wrkspc_01JwQvzr7rXLA5AGx3HKfFUJ");
+    expect(anthropicWorkspace({})).toBeNull();
+    const bad = liveConfig({ ANTHROPIC_API_KEY: "a", ANTHROPIC_WORKSPACE_ID: "default" });
+    expect(bad.provider).toBeNull();
+    expect(bad.problem).toMatch(/ANTHROPIC_WORKSPACE_ID/);
+    expect(anthropicWorkspace({ ANTHROPIC_WORKSPACE_ID: "default" })).toBeNull();
+  });
+
+  it("the page sees the label and models, never the key", () => {
+    const env = { ANTHROPIC_API_KEY: "sk-ant-api03-super-secret" };
+    const pub = publicConfig(liveConfig(env));
+    expect(JSON.stringify(pub)).not.toContain("sk-ant-api03-super-secret");
+    expect(pub).toMatchObject({ configured: true, provider: "anthropic", providerLabel: "Claude API", reasoningModel: "claude-opus-5-5", targetModel: "claude-haiku-4-5" });
+    expect(providerKey("anthropic", env)).toBe("sk-ant-api03-super-secret");
   });
 });
 

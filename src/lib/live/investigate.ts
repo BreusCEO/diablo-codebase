@@ -12,7 +12,7 @@ import { makeItems } from "./dataset";
 import { draftPlan } from "./draft";
 import { LiveError } from "./errors";
 import { interpret } from "./interpret";
-import { LLMError, type LLM, type LLMRequest } from "./llm/types";
+import { LLMError, type LLM, type LLMRequest, type LLMUsage } from "./llm/types";
 import { runPaired, scheduleCalls } from "./runner";
 import type { LiveEvent, LiveResult, LiveStage, Models, Usage } from "./types";
 
@@ -28,6 +28,8 @@ export interface InvestigateOptions {
   now?: () => number;
   /** The meter to fill; pass one to read the calls made even when the run fails. */
   usage?: Usage;
+  /** The researcher's question (optional); it frames the hypotheses. */
+  objective?: string;
 }
 
 /**
@@ -44,20 +46,28 @@ export function emptyUsage(): Usage {
   return { ...emptyStage(), byStage: { draft: emptyStage(), run: emptyStage(), interpret: emptyStage() } };
 }
 
-/** Counts every call a stage makes (successful or not) and the tokens it used. */
+/** Counts every call a stage makes (successful or not) and the tokens it used, including those a failed call was billed for. */
 function metered(llm: LLM, usage: Usage, stage: keyof Usage["byStage"]): LLM {
+  const add = (used: LLMUsage) => {
+    for (const u of [usage, usage.byStage[stage]]) {
+      u.inputTokens += used.inputTokens;
+      u.outputTokens += used.outputTokens;
+    }
+  };
   return {
     provider: llm.provider,
     model: llm.model,
     async complete(req: LLMRequest) {
       usage.calls++;
       usage.byStage[stage].calls++;
-      const res = await llm.complete(req);
-      for (const u of [usage, usage.byStage[stage]]) {
-        u.inputTokens += res.usage.inputTokens;
-        u.outputTokens += res.usage.outputTokens;
+      try {
+        const res = await llm.complete(req);
+        add(res.usage);
+        return res;
+      } catch (e) {
+        if (e instanceof LLMError && e.usage) add(e.usage);
+        throw e;
       }
-      return res;
     },
   };
 }
@@ -86,6 +96,7 @@ export async function investigate(opts: InvestigateOptions): Promise<LiveResult>
       llm: reasoningDraft,
       caps: opts.caps,
       signal: opts.signal,
+      objective: opts.objective,
       onAttempt: (attempt, ok, problems) => emit({ type: "draft-attempt", attempt, ok, problems }),
     });
     const planned = now();

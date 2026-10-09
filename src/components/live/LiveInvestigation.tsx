@@ -33,6 +33,17 @@ export function LiveInvestigation({ config }: { config: LivePublicConfig }) {
   // Leaving the page cancels a run in progress: no model calls nobody will see.
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // Arriving from Home with a question (?q=...) starts the run straight away.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current || !config.configured) return;
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (!q) return;
+    autoStarted.current = true;
+    void start();
+     
+  }, [config.configured]);
+
   async function start() {
     abortRef.current?.abort();
     const ctrl = new AbortController();
@@ -42,7 +53,7 @@ export function LiveInvestigation({ config }: { config: LivePublicConfig }) {
       const res = await fetch("/api/live/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: "{}",
+        body: JSON.stringify(runRequest()),
         signal: ctrl.signal,
         cache: "no-store",
       });
@@ -161,7 +172,7 @@ function Roles({ config }: { config: LivePublicConfig }) {
               <Mono className="text-ink-2">{reasoning}</Mono>
             ) : (
               <>
-                (default <Mono className="text-ink-2">{DEFAULT_MODELS.gemini.reasoning}</Mono>)
+                (default <Mono className="text-ink-2">{DEFAULT_MODELS.anthropic.reasoning}</Mono>)
               </>
             )}
           </div>
@@ -361,6 +372,7 @@ function PlanView({ plan, reasoning }: { plan: Plan; reasoning: string | null })
 /* ── No key: say so, and how to add one ───────────────────────── */
 
 function NotConfigured({ config }: { config: LivePublicConfig }) {
+  const claude = DEFAULT_MODELS.anthropic;
   return (
     <div className="mt-2 rounded-[10px] border border-line bg-surface p-4 sm:p-5" aria-labelledby="nokey-h" role="region">
       <div className="flex items-start gap-3">
@@ -369,33 +381,46 @@ function NotConfigured({ config }: { config: LivePublicConfig }) {
         </span>
         <div className="min-w-0">
           <h3 id="nokey-h" className="text-[15px] font-medium text-ink">
-            Live runs need a model key
+            {config.problem ? "Live runs are switched off" : "Live runs need a model key"}
           </h3>
           <p className="mt-1 max-w-[680px] text-ink-2">
-            This server has no model key, so nothing runs here and nothing on this page is simulated.
+            {config.problem
+              ? "The server’s model setup has a problem, so nothing runs here and nothing on this page is simulated."
+              : "This server has no model key, so nothing runs here and nothing on this page is simulated."}
             {config.problem && <span className="mt-1 block text-ink">{config.problem}</span>}
           </p>
         </div>
       </div>
       <ol className="mt-4 max-w-[720px] list-decimal space-y-2 pl-5 text-ink-2 marker:text-ink-3">
         <li>
-          Create a free Gemini API key in Google AI Studio (the free tier needs no card):{" "}
-          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-accent-text underline underline-offset-2">
-            aistudio.google.com <ExternalLink className="size-3.5" strokeWidth={1.5} aria-hidden />
+          Create a Claude API key in the Claude Console, under Settings → API keys:{" "}
+          <a
+            href="https://platform.claude.com/settings/keys"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-accent-text underline underline-offset-2"
+          >
+            platform.claude.com <ExternalLink className="size-3.5" strokeWidth={1.5} aria-hidden />
             <span className="sr-only">(opens in a new tab)</span>
           </a>
         </li>
         <li>
-          On Vercel, open the project’s Settings → Environment Variables and add <Mono className="text-ink">GEMINI_API_KEY</Mono> (or{" "}
-          <Mono className="text-ink">ZAI_API_KEY</Mono> for Z.ai GLM). Locally, put it in <Mono className="text-ink">.env.local</Mono>.
+          On Vercel, open the project’s Settings → Environment Variables and add <Mono className="text-ink">ANTHROPIC_API_KEY</Mono>. Locally, put it in{" "}
+          <Mono className="text-ink">.env.local</Mono>. A key that is not scoped to one workspace also needs <Mono className="text-ink">ANTHROPIC_WORKSPACE_ID</Mono>.
         </li>
         <li>
-          Redeploy. Optional: <Mono className="text-ink">DIABLO_REASONING_MODEL</Mono> (default <Mono>{DEFAULT_MODELS.gemini.reasoning}</Mono>) and{" "}
-          <Mono className="text-ink">DIABLO_TARGET_MODEL</Mono> (default <Mono>{DEFAULT_MODELS.gemini.target}</Mono>).
+          Redeploy. Claude Opus 5.5 (<Mono>{claude.reasoning}</Mono>) plans and explains; Claude Haiku 4.5 (<Mono>{claude.target}</Mono>) is the system under test, because
+          it accepts the temperatures the scenario varies. <Mono className="text-ink">DIABLO_REASONING_MODEL</Mono> and{" "}
+          <Mono className="text-ink">DIABLO_TARGET_MODEL</Mono> override them.
         </li>
       </ol>
+      <p className="mt-3 max-w-[720px] text-[13px] text-ink-2">
+        Alternatives: <Mono className="text-ink">GEMINI_API_KEY</Mono> (Google AI Studio, with a free tier) or <Mono className="text-ink">ZAI_API_KEY</Mono> (Z.ai GLM).
+        With several keys set, Claude is used unless <Mono className="text-ink">DIABLO_LLM</Mono> says otherwise.
+      </p>
       <p className="mt-4 text-[13px] text-ink-3">
-        With a key, one run makes at most {count(config.estimate.total)} model calls. Until then, the rest of the workspace runs on demo data.
+        With a key, one run makes at most {count(config.estimate.total)} model calls, billed to the key’s account; the run record shows what a finished run cost at
+        list price. Until then, the rest of the workspace runs on demo data.
       </p>
       <div className="mt-4">
         <Button variant="primary" icon={<Play strokeWidth={1.5} />} disabledReason="No model key is configured on this server">
@@ -404,4 +429,15 @@ function NotConfigured({ config }: { config: LivePublicConfig }) {
       </div>
     </div>
   );
+}
+
+/** What the browser asks for: the question from Home, and Gemini if a team member switched it on in Settings (the server decides). */
+function runRequest(): { reasoner?: "gemini"; objective?: string } {
+  const out: { reasoner?: "gemini"; objective?: string } = {};
+  try {
+    if (localStorage.getItem("diablo.reasoner") === "gemini") out.reasoner = "gemini";
+  } catch {}
+  const q = new URLSearchParams(window.location.search).get("q");
+  if (q) out.objective = q.slice(0, 400);
+  return out;
 }

@@ -3,10 +3,10 @@ import { getSession } from "@/lib/auth/dal";
 import { isSameOrigin } from "@/lib/auth/http";
 import { SESSION_COOKIE } from "@/lib/auth/session";
 import { maxCalls } from "@/lib/live/budget";
-import { liveConfig } from "@/lib/live/env";
 import { emptyUsage, investigate } from "@/lib/live/investigate";
 import { createModels } from "@/lib/live/llm";
 import { liveGuard, sessionKey } from "@/lib/live/server";
+import { configFor, type Reasoner } from "@/lib/live/team";
 import type { LiveEvent } from "@/lib/live/types";
 import { shortId } from "@/lib/slug";
 
@@ -34,10 +34,20 @@ export async function POST(request: NextRequest) {
   const session = await getSession();
   if (!session) return problem(401, "unauthenticated", "Sign in to run a live investigation.");
 
-  const config = liveConfig();
+  // Body: { reasoner?: "gemini", objective?: string }. Claude unless a team member asked for Gemini.
+  let body: { reasoner?: unknown; objective?: unknown } = {};
+  try {
+    const parsed = (await request.json()) as unknown;
+    if (parsed && typeof parsed === "object") body = parsed as typeof body;
+  } catch {
+    // An empty or invalid body means the defaults.
+  }
+  const wanted: Reasoner | undefined = body.reasoner === "gemini" ? "gemini" : undefined;
+  const objective = typeof body.objective === "string" ? body.objective : undefined;
+  const config = configFor(session.user.email, wanted);
   const models = createModels(config);
   if (!config.provider || !models) {
-    return problem(503, "not_configured", config.problem ?? "Live runs need a model key: set GEMINI_API_KEY (or ZAI_API_KEY) on the server.");
+    return problem(503, "not_configured", config.problem ?? "Live runs need a model key: set ANTHROPIC_API_KEY (or GEMINI_API_KEY, ZAI_API_KEY) on the server.");
   }
 
   const token = request.cookies.get(SESSION_COOKIE)?.value ?? `${session.provider}:${session.user.id}`;
@@ -68,6 +78,7 @@ export async function POST(request: NextRequest) {
           emit: send,
           signal: abort.signal,
           usage,
+          objective,
         });
       } catch (e) {
         // The error event has been sent. Log only what is safe: adapter messages never contain the key.

@@ -107,6 +107,19 @@ describe("paired runner", () => {
     expect(out.experiments[0].counts).toEqual({ control: { k: 39, n: 39 }, treatment: { k: 39, n: 39 } });
   });
 
+  it("counts the tokens a failed call was billed for (a reply cut off at max_tokens), and still leaves its pair out", async () => {
+    const cut = new LLMError("bad-response", "The reply hit the output limit (max_tokens 2048) before it finished.", {
+      provider: "anthropic",
+      usage: { inputTokens: 70, outputTokens: 2048 },
+    });
+    const target = fakeTarget(answers, () => 1, { failWhen: (req) => (req.messages[0].content === items[0].prompt && req.temperature === 0.2 && req.system.startsWith("You are Helper. Be brief") ? cut : null) });
+    const out = await runPaired({ target, plan: [{ ...E1, n: 10 }], items, caps });
+    expect(out.calls.failed).toBe(1);
+    expect(out.experiments[0].excludedPairs).toBe(1);
+    // 19 scored calls at 60 in / 30 out each (the fake), plus the billed failure.
+    expect(out.usage).toEqual({ inputTokens: 19 * 60 + 70, outputTokens: 19 * 30 + 2048 });
+  });
+
   it("a rate limit pauses the pool and re-queues the call instead of failing it", async () => {
     let limited = 0;
     const target = fakeTarget(answers, () => 1, {

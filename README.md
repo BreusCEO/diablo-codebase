@@ -10,7 +10,7 @@ Proof you can rerun (`npm test`, pinned in `src/lib/submission-claims.test.ts`),
 
 | Works today | Next |
 | --- | --- |
-| Full investigation loop in the browser on demo data; real statistics engine (Wilson, Newcombe, z, Fisher, exact McNemar, paired bootstrap, Holm); validity rubric C1–C9; a live investigation (`/live`) where a real model plans and explains while code runs the target and computes every number, as soon as `GEMINI_API_KEY` (or `ZAI_API_KEY`) is set; Google sign-in; 170 unit tests and 46 Playwright tests (sign-in setup included) pass | A connector to a customer's AI system behind the existing `DataProvider` interface; live runs stored server-side instead of in the browser tab |
+| Full investigation loop in the browser on demo data; real statistics engine (Wilson, Newcombe, z, Fisher, exact McNemar, paired bootstrap, Holm); validity rubric C1–C9; a live investigation (`/live`) where a real model plans and explains while code runs the target and computes every number, as soon as `ANTHROPIC_API_KEY` (Claude; or a Gemini or Z.ai key) is set; Google sign-in; 287 unit tests and 48 Playwright tests (sign-in setup included) pass | A connector to a customer's AI system behind the existing `DataProvider` interface; live runs stored server-side instead of in the browser tab |
 
 For every company that integrates AI, from telecoms to startups to frontier labs. These are target segments, not customers.
 
@@ -104,9 +104,23 @@ The page shows the scenario, the most calls a run can make before you press Run,
 
 ### Setup
 
-1. Create a Gemini API key in Google AI Studio: https://aistudio.google.com/apikey (the free tier needs no card).
-2. Add it as `GEMINI_API_KEY`: locally in `.env.local`; on Vercel under Project → Settings → Environment Variables, then redeploy. `ZAI_API_KEY` (Z.ai GLM, OpenAI-compatible) works too; with both set, `DIABLO_LLM=gemini|zai` chooses.
-3. Optional: `DIABLO_REASONING_MODEL` (default `gemini-3.8-flash`) and `DIABLO_TARGET_MODEL` (default `gemini-3.5-flash-lite`); for Z.ai the defaults are `glm-5.3` and `glm-4.7-flash`. The Gemini defaults were checked against Google's model list and pricing page on 9 Oct 2026; both have a free tier. Gemini 3 models think by default and that thinking counts as output tokens.
+The team's setup is Claude: **Claude Opus 5.5** reasons (plans the experiments, writes the conclusion) and **Claude Haiku 4.5** plays "Helper", the system under test.
+
+1. Create a Claude API key in the Claude Console under Settings → API keys: https://platform.claude.com/settings/keys. Claude API usage is billed to the key's account (there is no free tier beyond a new account's small trial credit).
+2. Add it as `ANTHROPIC_API_KEY`: locally in `.env.local`; on Vercel under Project → Settings → Environment Variables, then redeploy. If the key is not scoped to a single workspace, also set `ANTHROPIC_WORKSPACE_ID` (the `wrkspc_…` id from Settings → Workspaces); the API refuses such a key without it.
+3. Optional: `DIABLO_REASONING_MODEL` (default `claude-opus-5-5`) and `DIABLO_TARGET_MODEL` (default `claude-haiku-4-5`). Model ids were checked against the Claude models overview and deprecations pages on 9 Oct 2026.
+
+**Why the target is Claude Haiku 4.5 and not Claude Haiku 5.5.** The planted change includes a temperature change (0.2 → 1.0), so the target must accept both temperatures. The Claude API answers a temperature other than 1 with a 400 error on Claude Opus 4.7 and every later model, Claude Haiku 5.5 included (model deprecations page, "API parameter deprecations"). Claude Haiku 4.5 still takes 0 to 1 (it is a legacy model, not deprecated; Anthropic gives at least 60 days' notice before retiring one). Setting a target that rejects temperature, such as `claude-haiku-5-5`, switches live runs off with that reason on `/live` instead of failing mid-run. The reasoning model is never sent a temperature, so Claude Opus 5.5 is fine there.
+
+**Alternatives.** `GEMINI_API_KEY` (Google AI Studio, with a free tier; defaults `gemini-3.8-flash` and `gemini-3.5-flash-lite`) or `ZAI_API_KEY` (Z.ai GLM, OpenAI-compatible; defaults `glm-5.3` and `glm-4.7-flash`). With several keys set, Claude is used first, then Gemini, then Z.ai; `DIABLO_LLM=anthropic|gemini|zai` chooses.
+
+**How the engine calls Claude** (`src/lib/live/llm/anthropic.ts`, plain `fetch`, written against the Claude API docs as read on 9 Oct 2026):
+
+- `POST https://api.anthropic.com/v1/messages` with `x-api-key`, `anthropic-version: 2023-06-01` and, when set, `anthropic-workspace-id`. The key is only ever a request header.
+- Body: `model`, `max_tokens` (8,192 to plan, 4,096 for the conclusion, 2,048 per target answer), `system` as a top-level string, `messages`, and `temperature` only on target calls. No `thinking` field: Claude Opus 5.5 always thinks (adaptive, default effort `medium`), and that thinking counts toward `max_tokens` and is billed as output; Claude Haiku 4.5 does not think unless asked.
+- JSON: the Claude API has no schema-free JSON mode and current models refuse an assistant prefill, so the prompt asks for one JSON object and the existing zod validate-and-repair loop checks it. Structured outputs (`output_config.format`) are supported on Claude Opus 5.5 but not used yet: the plan's schema should first be tried against the real API.
+- The answer is the text blocks joined; `thinking` and `redacted_thinking` blocks are dropped. A reply stopped by `max_tokens` (or a full context window) is a typed bad response that still counts its billed tokens; a `refusal` comes back as an answer with its category.
+- Errors: 401 `authentication_error` and 403 `permission_error` → auth; 402 `billing_error` and spend limits (a 429 with `error_code: enforced_spend_limit_reached`, or a 400 for a limit you set) → quota; 404 → model not found (a wrong workspace id → auth); 429 `rate_limit_error` → rate limit; 500 `api_error`, 504 `timeout_error`, 529 `overloaded_error` → server; 400 `invalid_request_error`, 413 `request_too_large` → bad request. Only rate limits and server errors are retried, at most 3 times, waiting `retry-after` when given (never more than 20 s per wait), else 1 s, 2 s, 4 s. Messages name the status, error type and `request-id`, with the key redacted.
 
 Without a key, `/live` says so plainly and `POST /api/live/run` answers 503; nothing is simulated in its place.
 
@@ -123,7 +137,17 @@ Without a key, `/live` says so plainly and `POST /api/live/run` answers 503; not
 | `LIVE_COOLDOWN_SECONDS` | 60 between runs of one session | 0–3600 |
 | `LIVE_MAX_CONCURRENT_RUNS` | 2 | 1–4 |
 
-A typical plan (two single-factor ablations against Helper v1) makes about 120 target calls plus 2 to 5 reasoning calls. On the free tier that costs nothing; the per-minute rate limit is what decides speed: a rate limit that outlasts the adapter's own retries pauses the whole pool and puts the call back in the queue, so a slow key gives fewer finished pairs before the deadline, and check C2 then flags the small sample. Retries happen only on 429 and 5xx, with capped backoff. Errors are typed (auth, model not found, rate limit, quota, server, network, timeout, bad response); a bad key, an unknown model or an exhausted daily quota stops the run at once. Keys are read only in `src/lib/live/env.ts`, sent only as a request header, and redacted from every error message.
+**Claude list prices** (USD per million tokens, https://platform.claude.com/docs/en/about-claude/pricing, read 9 Oct 2026; also in `src/lib/live/pricing.ts`):
+
+| Model | Input | Cache hits | Output |
+| --- | --- | --- | --- |
+| Claude Opus 5.5 (`claude-opus-5-5`) | $4 | $0.20 | $20 |
+| Claude Haiku 4.5 (`claude-haiku-4-5`) | $1 | $0.10 | $5 |
+| Claude Haiku 5.5 (`claude-haiku-5-5`), prompts up to 100k tokens | $0.10 | $0.01 | $0.50 |
+
+The engine sends no `cache_control`, so its runs pay the base input price. When a run finishes, its run record shows what its measured tokens cost at these prices (reasoning and target separately). No Claude run has been made yet, so there is no measured figure here. What the caps allow at most: output is bounded by `max_tokens` on every call, which at list price is about $0.49 for three planning calls, $0.16 for two conclusion calls and $1.64 for 160 target calls; input, a few thousand tokens per reasoning call and a short prompt per target call, adds roughly another $0.10. So the caps hold one run to roughly $2.40 at most; a typical run, whose target answers are far shorter than 2,048 tokens, should cost a fraction of that, but that is an expectation until a run is measured.
+
+A typical plan (two single-factor ablations against Helper v1) makes about 120 target calls plus 2 to 5 reasoning calls. On Gemini's free tier that costs nothing. Whatever the provider, the per-minute rate limit is what decides speed: a rate limit that outlasts the adapter's own retries pauses the whole pool and puts the call back in the queue, so a slow key gives fewer finished pairs before the deadline, and check C2 then flags the small sample. Retries happen only on 429 and 5xx, with capped backoff. Errors are typed (auth, model not found, rate limit, quota, server, network, timeout, bad response); a bad key, an unknown model or an exhausted quota or spend limit stops the run at once. Keys are read only in `src/lib/live/env.ts`, sent only as a request header, and redacted from every error message.
 
 The run API (`POST /api/live/run`, Node runtime) streams NDJSON events: `start`, `stage`, `draft-attempt`, `plan`, `progress`, `interpret-attempt`, then `result` or `error`. It needs a signed-in session (the proxy checks the cookie, the route checks again through `getSession()`) and a same-origin request. The abuse controls (one run at a time per session, a cooldown, a cap on concurrent runs and a daily call cap) live in memory per server instance (`src/lib/live/guard.ts`): best effort, not a distributed limiter. A cold start resets them, and the provider's own quota remains the final backstop. Leaving the page cancels the run.
 
@@ -131,8 +155,19 @@ The run API (`POST /api/live/run`, Node runtime) streams NDJSON events: `start`,
 
 - Real, once a key is set: the planning and interpretation calls to the reasoning model, every call to the target model, every reply, every score and every statistic on `/live`.
 - Not real anywhere else: the demo workspace's own investigations (seeded, simulated, labelled as such).
-- Tested without a key: the whole pipeline runs in unit tests against a scripted fake model and a fake target (`src/lib/live/*.test.ts`), and both adapters are tested against mocked `fetch` (request shape, error classification, retries, timeouts, no key leakage). No key was available while this was built, so the live path has not yet been run against the real Gemini or Z.ai API; the Z.ai adapter in particular is kept small and only covered by mocked tests.
+- Tested without a key: the whole pipeline runs in unit tests against a scripted fake model and a fake target (`src/lib/live/*.test.ts`), and all three adapters are tested against mocked `fetch` (request shape, response parsing, error classification, retries, timeouts, no key leakage). No key was available while this was built, so the live path has not yet been run against the real Claude, Gemini or Z.ai API; the Claude adapter follows the Claude API docs as read on 9 Oct 2026 but has never received a real response, and the Z.ai adapter in particular is kept small and only covered by mocked tests.
 - Results are kept in the browser tab only (the API stores nothing). One target model and one seeded item set: a result holds for that setup.
+
+## Not yet implemented
+
+Against `DIABLO_ENGINE_PROMPT.md`, honestly:
+
+- **Persistence:** no server database. Sessions, events, evidence and knowledge do not survive outside the browser; no crash-resume.
+- **Experiment types:** only paired A/B ablation on the planted-change testbed (Helper v1/v2). Probe sets, regression diff on user targets, perturbation, consistency and counterexample search are not built.
+- **Targets:** only the built-in model-API testbed. HTTP agents, Python callables and Hugging Face targets are not built.
+- **Agents:** planner and analyst roles are covered by the draft and interpret steps; separate critic, improver, verifier and librarian agents are not built.
+- **Improve → verify loop, knowledge base, claim linter for full reports, Hugging Face export and training scaffolding, `diablo bench` for the live engine:** not built. (`npm run bench` measures the statistical protocol on simulated data.)
+- **LLM judges:** not used; all scoring is programmatic.
 
 ## Principles
 

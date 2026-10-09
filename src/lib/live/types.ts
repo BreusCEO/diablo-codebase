@@ -7,7 +7,7 @@ import type { CallEstimate, LiveCaps } from "./budget";
 import type { LLMErrorKind } from "./llm/types";
 import type { Settings } from "./registry";
 
-export type ProviderId = "gemini" | "zai";
+export type ProviderId = "anthropic" | "gemini" | "zai";
 
 export interface AbuseLimits {
   /** Model calls per UTC day across all users of one server instance. */
