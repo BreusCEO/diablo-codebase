@@ -87,6 +87,22 @@ test.describe("signed out", () => {
     await ctx.close();
   });
 
+  test("The sign-in page hydrates its server-rendered query without console errors or warnings", async ({ page }) => {
+    const messages: string[] = [];
+    page.on("console", (m) => {
+      if (m.type() === "error" || m.type() === "warning") messages.push(`${page.url()}: ${m.text()}`);
+    });
+    page.on("pageerror", (e) => messages.push(`${page.url()}: ${e.message}`));
+    for (const route of ["/", "/?next=%2Fsettings", "/?error=access_denied&next=%2Fsettings", "/?error=made-up", "/?next=a&next=b"]) {
+      await page.goto(route);
+      await page.waitForLoadState("networkidle");
+    }
+    // An unknown error code still explains itself, in general terms.
+    await page.goto("/?error=made-up");
+    await expect(page.locator("main [role=alert]")).toContainText("Something went wrong");
+    expect(messages, messages.join("\n")).toEqual([]);
+  });
+
   test("Google is offered but disabled with a reason when it is not configured; the start route explains", async ({ page }) => {
     await page.goto("/");
     const google = page.getByRole("button", { name: "Continue with Google" });
