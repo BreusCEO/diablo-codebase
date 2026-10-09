@@ -265,3 +265,29 @@ describe("GET /api/auth/google/callback", () => {
     expect(res.headers.get("location")).toBe(`${ORIGIN}/home`);
   });
 });
+
+describe("Google routes never answer 500", () => {
+  // In production a missing AUTH_SECRET throws; before the fail-safe that became a 500 page.
+  const brokenProduction = () => {
+    withGoogle();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("VERCEL_ENV", "production");
+    vi.stubEnv("AUTH_SECRET", "");
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  };
+
+  it("start: an internal failure sends the visitor back to sign-in with server_error", async () => {
+    brokenProduction();
+    const res = await startGoogle(request("/api/auth/google?next=/home"));
+    expect(res.status).toBe(302);
+    expect(new URL(res.headers.get("location")!).search).toBe("?error=server_error");
+  });
+
+  it("callback: an internal failure sends the visitor back to sign-in with server_error", async () => {
+    brokenProduction();
+    const res = await googleCallback(request("/api/auth/google/callback?code=abc&state=xyz", { cookies: { [OAUTH_COOKIE]: "not-a-sealed-flow" } }));
+    expect(res.status).toBe(302);
+    expect(new URL(res.headers.get("location")!).search).toBe("?error=server_error");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+  });
+});
