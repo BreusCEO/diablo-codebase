@@ -10,6 +10,16 @@ import type { ProviderId } from "./types";
  * target's temperature (0.2 vs 1.0), and Claude Opus 4.7 and every later
  * Claude model, Haiku 5.5 included, answer a temperature other than 1 with a
  * 400 error. Haiku 4.5 still takes temperature 0 to 1 (see below).
+ *
+ * Claude Haiku 4.5 is the one legacy model here, and it has the nearest date
+ * of any active Claude model: the deprecations table (read 9 Oct 2026) lists
+ * claude-haiku-4-5-20251001 as Active, retirement "Not sooner than October 15,
+ * 2026". Past that date Anthropic may deprecate it, with at least 60 days'
+ * notice before retirement. The fallback target that still takes temperature
+ * 0 to 1 and has a later commitment is claude-sonnet-4-6 (not sooner than
+ * 17 Feb 2027; $3 / $15 per MTok): set DIABLO_TARGET_MODEL=claude-sonnet-4-6.
+ * Moving the target to Claude Haiku 5.5 or Opus 5.5 needs a scenario whose
+ * second factor is not temperature.
  */
 export const DEFAULT_MODELS: Record<ProviderId, { reasoning: string; target: string }> = {
   anthropic: { reasoning: "claude-opus-5-5", target: "claude-haiku-4-5" },
@@ -42,4 +52,21 @@ export function claudeRejectsTemperature(model: string): boolean {
   const major = Number(m[1]);
   const minor = m[2] === undefined ? 0 : Number(m[2]);
   return major > 4 || (major === 4 && minor >= 7);
+}
+
+/**
+ * True for a Claude model that takes output_config.effort. The effort page's
+ * supported models (read 9 Oct 2026): every Fable and Mythos model, Opus 4.5
+ * and later, Sonnet 4.6 and later, Haiku 5.5 and later. Claude Haiku 4.5 is
+ * not among them and rejects the field. An id this does not recognise is
+ * assumed not to take it: leaving effort out is always a valid request.
+ */
+export function claudeAcceptsEffort(model: string): boolean {
+  const id = model.trim().toLowerCase();
+  if (/^claude-(?:fable|mythos)-/.test(id)) return true;
+  const m = /^claude-(opus|sonnet|haiku)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?$/.exec(id);
+  if (!m) return false;
+  const version = Number(m[2]) + (m[3] === undefined ? 0 : Number(m[3]) / 100);
+  const from = { opus: 4.05, sonnet: 4.06, haiku: 5 }[m[1] as "opus" | "sonnet" | "haiku"];
+  return version >= from;
 }

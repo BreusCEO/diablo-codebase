@@ -1,5 +1,6 @@
 import "server-only";
 import { DEFAULT_RETRY, isObject, postJson, retryAfterHeader, safeMessage, sleep, withRetries, type Fetch, type RetryPolicy, type Sleep } from "./http";
+import { claudeAcceptsEffort } from "../providers";
 import { LLMError, type LLM, type LLMRequest, type LLMResponse, type LLMUsage } from "./types";
 
 /**
@@ -18,12 +19,16 @@ import { LLMError, type LLM, type LLMRequest, type LLMResponse, type LLMUsage } 
  * - No thinking field: Claude Opus 5.5 always thinks (adaptive, default effort
  *   "medium"); Claude Haiku 4.5 does not think unless asked. Either way the
  *   thinking counts toward max_tokens and is billed as output.
+ * - output_config.effort only when the caller sets one and the model takes it
+ *   (claudeAcceptsEffort: Claude Opus 5.5 yes, Claude Haiku 4.5 no).
  * - JSON: the Claude API has no schema-free JSON mode and current models
  *   refuse an assistant prefill, so `json` changes nothing here; the prompt
  *   asks for one JSON object and the caller validates and repairs.
  * - The answer is the text blocks joined; thinking and redacted_thinking
- *   blocks are not the answer. A reply stopped by max_tokens is an error
- *   ("bad-response"), with its billed tokens attached.
+ *   blocks are not the answer. A reply stopped by max_tokens (or a full
+ *   context window) comes back as an answer with that finish reason, like the
+ *   Gemini and Z.ai adapters' MAX_TOKENS and length: the callers decide (the
+ *   draft loop asks for a shorter reply, the runner leaves out an empty one).
  */
 export const ANTHROPIC_BASE = "https://api.anthropic.com/v1";
 export const ANTHROPIC_VERSION = "2023-06-01";
@@ -57,6 +62,7 @@ export function anthropicRequestBody(model: string, req: LLMRequest) {
     ...(req.system ? { system: req.system } : {}),
     messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
     ...(req.temperature !== undefined ? { temperature: Math.min(1, Math.max(0, req.temperature)) } : {}),
+    ...(req.effort && claudeAcceptsEffort(model) ? { output_config: { effort: req.effort } } : {}),
   };
 }
 
@@ -74,7 +80,7 @@ export function anthropicLLM(opts: AnthropicOptions): LLM {
     if (status < 200 || status >= 300) {
       throw classifyAnthropicError(status, json, res.get("retry-after"), opts.apiKey, res.get("request-id"));
     }
-    return parseAnthropicResponse(json, opts.model, body.max_tokens);
+    return parseAnthropicResponse(json, opts.model);
   };
   return {
     provider: "anthropic",
@@ -98,18 +104,12 @@ export function anthropicUsage(value: unknown): LLMUsage {
   };
 }
 
-export function parseAnthropicResponse(json: unknown, model: string, maxTokens: number): LLMResponse {
+export function parseAnthropicResponse(json: unknown, model: string): LLMResponse {
   if (!isObject(json)) throw new LLMError("bad-response", "The answer was not JSON.", { provider: "anthropic" });
   const usage = anthropicUsage(json.usage);
   if (!Array.isArray(json.content)) throw new LLMError("bad-response", "The answer had no content blocks.", { provider: "anthropic", usage });
   const answeredBy = typeof json.model === "string" && json.model ? json.model : model;
   const stop = typeof json.stop_reason === "string" ? json.stop_reason : null;
-  if (stop === "max_tokens") {
-    throw new LLMError("bad-response", `The reply hit the output limit (max_tokens ${maxTokens}) before it finished.`, { provider: "anthropic", usage });
-  }
-  if (stop === "model_context_window_exceeded") {
-    throw new LLMError("bad-response", "The reply was cut off: the model's context window was full.", { provider: "anthropic", usage });
-  }
   // Only text blocks are the answer; thinking and redacted_thinking (and any other block type) are not.
   const text = json.content
     .filter((b): b is Record<string, unknown> => isObject(b) && b.type === "text" && typeof b.text === "string")

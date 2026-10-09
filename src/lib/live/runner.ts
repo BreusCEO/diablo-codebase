@@ -20,7 +20,7 @@ import type { LiveCaps } from "./budget";
 import type { Item } from "./dataset";
 import { LiveError } from "./errors";
 import { sleep } from "./llm/http";
-import { isFatal, LLMError, type LLM, type LLMErrorKind, type LLMUsage } from "./llm/types";
+import { isCutOff, isFatal, LLMError, type LLM, type LLMErrorKind, type LLMUsage } from "./llm/types";
 import { settingsKey, targetRequest, type Settings } from "./registry";
 import { scoreReply } from "./scorer";
 import type { PlannedExperiment, RunProgress } from "./types";
@@ -172,7 +172,7 @@ export async function runPaired({ target, plan, items, caps, signal, now = Date.
       usage.outputTokens += res.usage.outputTokens;
       reportedModel ??= res.model;
       // An empty reply cut off by the output limit is our budget's fault, not the target's: leave the pair out.
-      if (!res.text.trim() && /^(MAX_TOKENS|length)$/i.test(res.finishReason ?? "")) {
+      if (!res.text.trim() && isCutOff(res.finishReason)) {
         throw new LLMError("bad-response", "The reply was cut off by the output limit before any answer.", { provider: target.provider });
       }
       const s = scoreReply(res.text, t.item.answer);

@@ -6,6 +6,9 @@
 
 export type LLMProvider = "anthropic" | "gemini" | "zai" | "fake";
 
+/** The effort levels every Claude model with an effort setting accepts. */
+export type Effort = "low" | "medium" | "high";
+
 export interface LLMMessage {
   role: "user" | "assistant";
   content: string;
@@ -22,6 +25,12 @@ export interface LLMRequest {
   json?: boolean;
   temperature?: number;
   maxTokens?: number;
+  /**
+   * How much the model may think (Claude's output_config.effort). Sent only to a
+   * Claude model that accepts it (see claudeAcceptsEffort); Claude Haiku 4.5 and
+   * the other providers' adapters ignore it.
+   */
+  effort?: Effort;
   /** Cancels the call (the client went away, or the run hit its deadline). */
   signal?: AbortSignal;
   /** Per-call timeout; the adapter's default applies when absent. */
@@ -91,6 +100,13 @@ export class LLMError extends Error {
     this.usage = opts.usage ?? null;
   }
 }
+
+/** The reply stopped at the output limit (Gemini MAX_TOKENS, Z.ai length, Claude max_tokens) or a full context window. */
+export const isCutOff = (finishReason: string | null): boolean =>
+  /^(MAX_TOKENS|length|max_tokens|model_context_window_exceeded)$/i.test(finishReason ?? "");
+
+/** The model declined to answer (a Claude refusal, a Gemini block): retrying with that turn in the history only repeats it. */
+export const isRefusal = (finishReason: string | null): boolean => /^(refusal|BLOCKED)(:|$)/i.test(finishReason ?? "");
 
 export const isRetryable = (e: unknown): e is LLMError =>
   e instanceof LLMError && (e.kind === "rate-limit" || e.kind === "server");

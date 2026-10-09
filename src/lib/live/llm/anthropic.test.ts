@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ANTHROPIC_BASE, ANTHROPIC_VERSION, anthropicLLM, classifyAnthropicError, DEFAULT_MAX_TOKENS, parseAnthropicResponse } from "./anthropic";
-import { LLMError } from "./types";
+import { isCutOff, isRefusal, LLMError } from "./types";
 
 const KEY = "sk-ant-api03-TEST-secret-key-0123456789abcdef";
 const ok = (body: unknown, headers: Record<string, string> = {}) =>
@@ -86,6 +86,18 @@ describe("Claude adapter: request shape", () => {
     expect(withJson.messages.at(-1).role).toBe("user");
   });
 
+  it("sends output_config.effort only when asked and only to a model that takes it (Opus 5.5 yes, Haiku 4.5 no)", async () => {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => ok(answer));
+    const req = { system: "s", messages: [{ role: "user" as const, content: "x" }], effort: "medium" as const };
+    await call(fetch, "claude-opus-5-5").complete(req);
+    await call(fetch, "claude-haiku-4-5").complete(req);
+    await call(fetch, "claude-opus-5-5").complete({ ...req, effort: undefined });
+    const [opus, haiku, none] = fetch.mock.calls.map((c) => JSON.parse(String(c[1]?.body)));
+    expect(opus.output_config).toEqual({ effort: "medium" });
+    expect(haiku).not.toHaveProperty("output_config");
+    expect(none).not.toHaveProperty("output_config");
+  });
+
   it("sends temperature only when asked, clamped to the API's 0..1; leaves out an empty system prompt; max_tokens is always set", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => ok(answer));
     const llm = call(fetch, "claude-haiku-4-5");
@@ -110,10 +122,9 @@ describe("Claude adapter: responses", () => {
     const r = parseAnthropicResponse(
       { ...answer, usage: { input_tokens: 50, cache_creation_input_tokens: 1000, cache_read_input_tokens: 2000, output_tokens: 70 } },
       "claude-opus-5-5",
-      100,
     );
     expect(r.usage).toEqual({ inputTokens: 3050, outputTokens: 70 });
-    expect(parseAnthropicResponse({ content: [], stop_reason: "end_turn" }, "m", 100).usage).toEqual({ inputTokens: 0, outputTokens: 0 });
+    expect(parseAnthropicResponse({ content: [], stop_reason: "end_turn" }, "m").usage).toEqual({ inputTokens: 0, outputTokens: 0 });
   });
 
   it("ignores every block that is not text, and reports the model that answered", () => {
@@ -131,35 +142,37 @@ describe("Claude adapter: responses", () => {
         usage: { input_tokens: 10, output_tokens: 12 },
       },
       "claude-haiku-4-5",
-      2048,
     );
     expect(r).toEqual({ text: "Step 1: 6 × 7 = 42.\nAnswer: 42", usage: { inputTokens: 10, outputTokens: 12 }, model: "claude-haiku-4-5-20251001", finishReason: "end_turn" });
     // No model field: the configured id stands in.
-    expect(parseAnthropicResponse({ content: [], stop_reason: null }, "claude-haiku-4-5", 1).model).toBe("claude-haiku-4-5");
+    expect(parseAnthropicResponse({ content: [], stop_reason: null }, "claude-haiku-4-5").model).toBe("claude-haiku-4-5");
   });
 
-  it("a reply stopped by max_tokens is a bad response that still carries its billed tokens", async () => {
-    const cut = { ...answer, stop_reason: "max_tokens", usage: { input_tokens: 900, output_tokens: 8192 } };
-    const err = await call(vi.fn<typeof globalThis.fetch>(async () => ok(cut))).complete({ system: "", messages: [{ role: "user", content: "x" }], maxTokens: 8192 }).catch((e) => e);
-    expect(err).toBeInstanceOf(LLMError);
-    expect(err).toMatchObject({ kind: "bad-response", provider: "anthropic", usage: { inputTokens: 900, outputTokens: 8192 } });
-    expect(err.message).toMatch(/max_tokens 8192/);
-    expect(() => parseAnthropicResponse({ ...answer, stop_reason: "model_context_window_exceeded" }, "m", 1)).toThrow(/context window/);
+  it("a reply stopped by max_tokens comes back with that finish reason and its billed tokens, like Gemini's MAX_TOKENS", async () => {
+    const cut = { ...answer, content: [{ type: "text", text: '{"hypotheses": [' }], stop_reason: "max_tokens", usage: { input_tokens: 900, output_tokens: 16000 } };
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => ok(cut));
+    const res = await call(fetch).complete({ system: "", messages: [{ role: "user", content: "x" }], maxTokens: 16000 });
+    expect(res).toEqual({ text: '{"hypotheses": [', usage: { inputTokens: 900, outputTokens: 16000 }, model: "claude-opus-5-5", finishReason: "max_tokens" });
+    expect(fetch).toHaveBeenCalledTimes(1); // not retried
+    expect(isCutOff(res.finishReason)).toBe(true);
+    const full = parseAnthropicResponse({ ...answer, stop_reason: "model_context_window_exceeded" }, "m");
+    expect(full.finishReason).toBe("model_context_window_exceeded");
+    expect(isCutOff(full.finishReason)).toBe(true);
   });
 
   it("a refusal is an answer that says no, with its category, not an error", () => {
     const r = parseAnthropicResponse(
       { ...answer, content: [{ type: "text", text: "I can't help with that." }], stop_reason: "refusal", stop_details: { type: "refusal", category: "cyber", explanation: null } },
       "m",
-      100,
     );
     expect(r).toMatchObject({ text: "I can't help with that.", finishReason: "refusal:cyber" });
-    expect(parseAnthropicResponse({ content: [], stop_reason: "refusal", stop_details: null }, "m", 1).finishReason).toBe("refusal");
+    expect(isRefusal(r.finishReason)).toBe(true);
+    expect(parseAnthropicResponse({ content: [], stop_reason: "refusal", stop_details: null }, "m").finishReason).toBe("refusal");
   });
 
   it("a body that is not JSON, or has no content array, is a bad response and is not retried", async () => {
-    expect(() => parseAnthropicResponse("nope", "m", 1)).toThrow(/not JSON/);
-    expect(() => parseAnthropicResponse({ type: "message", usage: { input_tokens: 3, output_tokens: 1 } }, "m", 1)).toThrow(/no content blocks/);
+    expect(() => parseAnthropicResponse("nope", "m")).toThrow(/not JSON/);
+    expect(() => parseAnthropicResponse({ type: "message", usage: { input_tokens: 3, output_tokens: 1 } }, "m")).toThrow(/no content blocks/);
     const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response("<html>oops</html>", { status: 200 }));
     await expect(call(fetch).complete({ system: "", messages: [] })).rejects.toMatchObject({ kind: "bad-response" });
     expect(fetch).toHaveBeenCalledTimes(1);

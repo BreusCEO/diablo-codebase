@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CAP_LIMITS, maxCalls } from "./budget";
 import { anthropicWorkspace, liveConfig, providerKey, publicConfig } from "./env";
-import { claudeRejectsTemperature, DEFAULT_MODELS } from "./providers";
+import { claudeAcceptsEffort, claudeRejectsTemperature, DEFAULT_MODELS } from "./providers";
 
 describe("live env: provider pick", () => {
   it("is not configured without a key (not a misconfiguration, so no problem text)", () => {
@@ -81,6 +81,15 @@ describe("live env: Claude", () => {
     }
     for (const id of ["claude-haiku-4-5", "claude-haiku-4-5-20251001", "claude-sonnet-4-6", "claude-opus-4-6", "claude-opus-4-5-20251101", "gemini-3.8-flash", "something-else"]) {
       expect(claudeRejectsTemperature(id), id).toBe(false);
+    }
+  });
+
+  it("knows which Claude models take output_config.effort (Opus 4.5+, Sonnet 4.6+, Haiku 5.5, Fable, Mythos; not Haiku 4.5)", () => {
+    for (const id of ["claude-opus-5-5", "claude-opus-4-5-20251101", "claude-opus-4-6", "claude-sonnet-4-6", "claude-sonnet-5-5", "claude-haiku-5-5", "claude-fable-5-1", "claude-mythos-5-1"]) {
+      expect(claudeAcceptsEffort(id), id).toBe(true);
+    }
+    for (const id of ["claude-haiku-4-5", "claude-haiku-4-5-20251001", "claude-sonnet-4-5-20250929", "claude-opus-4-1-20250805", "gemini-3.8-flash", "something-else"]) {
+      expect(claudeAcceptsEffort(id), id).toBe(false);
     }
   });
 
