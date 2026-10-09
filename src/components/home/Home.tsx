@@ -25,13 +25,17 @@ export function Home() {
 
   return (
     <>
-      {/* A burgundy glow rising from the bottom of the page. */}
+      {/* A burgundy-and-black glow rising from the bottom of the page. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[55vh]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[70vh]"
         style={{
-          background:
-            "radial-gradient(120% 90% at 50% 120%, rgb(87 0 26 / 0.34) 0%, rgb(87 0 26 / 0.14) 40%, transparent 72%)",
+          background: [
+            // Near-black at the very bottom, drawn over…
+            "linear-gradient(to bottom, transparent 35%, rgb(12 4 7 / 0.55) 80%, rgb(8 2 4 / 0.85) 100%)",
+            // …a deep burgundy glow rising from below.
+            "radial-gradient(130% 85% at 50% 115%, rgb(87 0 26 / 0.95) 0%, rgb(87 0 26 / 0.6) 30%, rgb(87 0 26 / 0.18) 55%, transparent 75%)",
+          ].join(", "),
         }}
       />
       <div className="relative mx-auto flex min-h-full w-full max-w-[720px] flex-col px-4 pb-8 pt-[clamp(48px,18vh,168px)] sm:px-6">
