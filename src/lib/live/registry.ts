@@ -19,7 +19,7 @@ export const SYSTEM_PROMPTS = {
     "Check every multiplication before you use its result.",
     'End your reply with a final line of the form "Answer: <integer>" and nothing else on that line.',
   ].join("\n"),
-  short: "You are Helper. Be brief: reply with the result only.",
+  short: "You are Helper. Be brief: reply with the final number only, with no working.",
 } as const;
 
 export type PromptVariant = keyof typeof SYSTEM_PROMPTS;
@@ -28,7 +28,7 @@ export const FACTORS = {
   system_prompt: {
     label: "System prompt",
     values: ["full", "short"] as const,
-    valueLabel: { full: "Full: step by step, ends with an “Answer:” line", short: "Short: “reply with the result only”" } as Record<string, string>,
+    valueLabel: { full: "Full: step by step, ends with an “Answer:” line", short: "Short: “the final number only, no working”" } as Record<string, string>,
   },
   temperature: {
     label: "Temperature",

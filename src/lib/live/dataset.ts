@@ -18,10 +18,10 @@ export interface Item {
 }
 
 export const DATASET = {
-  id: "helper-arithmetic-v1",
-  name: "helper-arithmetic-v1",
+  id: "helper-arithmetic-v2",
+  name: "helper-arithmetic-v2",
   seed: 20261009,
-  description: "Seeded multi-step integer arithmetic (two products of a 3-digit and a 2-digit number, then a sum); exact answers computed by code.",
+  description: "Seeded multi-step integer arithmetic (products of a 4-digit and a 3-digit number, combined with a third term); exact answers computed by code. Hard enough that working it through matters.",
 } as const;
 
 /** Most items any run can use (the per-arm ceiling). */
@@ -36,11 +36,11 @@ export function makeItems(n: number, seed: number = DATASET.seed): Item[] {
   const rand = mulberry32(seed);
   const items: Item[] = [];
   for (let i = 0; i < n; i++) {
-    const a = between(rand, 101, 999);
-    const b = between(rand, 12, 98);
-    const c = between(rand, 101, 999);
-    const d = between(rand, 12, 98);
-    const e = between(rand, 1000, 9999);
+    const a = between(rand, 1001, 9999);
+    const b = between(rand, 101, 999);
+    const c = between(rand, 1001, 9999);
+    const d = between(rand, 101, 999);
+    const e = between(rand, 10001, 99999);
     const form = i % 3;
     let expression: string;
     let answer: number;
