@@ -10,7 +10,8 @@ Live: https://diablo.pnoia.dev
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000
+cp .env.example .env.local   # optional in development; see "Sign-in" below
+npm run dev -- -p 3123       # http://localhost:3123
 ```
 
 Checks (all cross-platform, no bash needed):
@@ -25,18 +26,40 @@ npm run check        # typecheck + lint + unit tests + build
 npm run check:release  # fails while legal/contact placeholders remain in src/lib/brand.ts
 ```
 
-First time on a machine: `npx playwright install chromium`. Run `npm run build` before `npm run test:e2e`.
+First time on a machine: `npx playwright install chromium`. Run `npm run build` before `npm run test:e2e`. The e2e server gets a throwaway `AUTH_SECRET`; a setup project signs in once through the demo route and every spec reuses that session.
+
+## Sign-in
+
+Every workspace route (`/home`, `/investigations`, `/systems`, `/experiments`, `/evidence`, `/reports`, `/datasets`, `/settings`, `/design`) needs a session. There is no database: the session is a signed JWT (HS256, `jose`) in an `httpOnly`, `SameSite=Lax` cookie (`Secure` in production) that lasts 7 days.
+
+- **Continue with Google**: OAuth 2.0 Authorization Code flow with PKCE (S256) and a `state` nonce, done with plain `fetch`. The verifier, state and return path travel in a 10-minute signed cookie scoped to `/api/auth/google`. The callback checks state, exchanges the code with the verifier, and checks the ID token's issuer, audience, expiry and verified email. If `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are not set, the button is shown disabled with the reason.
+- **Enter demo workspace**: a real server session flagged `demo` ("Demo researcher"), so the demo works without a Google account.
+- **Email and password** are not offered: they need a user store (hashes, verification, resets), and this app deliberately has no database. Add one before adding them.
+
+How it fits together:
+
+| Path | Role |
+| --- | --- |
+| `src/proxy.ts` | Verifies the cookie for every workspace route and app API route; redirects to `/` with `?next=`; sends signed-in visitors on `/` to `/home` |
+| `src/app/(app)/layout.tsx` | Starts the server-side session read (`getSession()`), hands the promise to `SessionProvider`, and redirects again if it is missing (defence in depth) |
+| `src/lib/auth/` | `env` (the only env reads), `session` (sign/verify), `google` (PKCE flow), `dal` (`getSession()`), `http` (cookies, same-origin check), `next-path` (open-redirect guard) |
+| `src/app/api/auth/*` | `GET google`, `GET google/callback`, `POST demo`, `POST signout` (POSTs require a same-origin `Origin`) |
+| `src/components/auth/SessionProvider.tsx` | `useSession()` and `signOut()` for client components |
+
+Environment variables (see `.env.example`): `AUTH_SECRET` (required in production, 32+ characters: `openssl rand -base64 32`), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and optionally `APP_ORIGIN` (the public origin used for the redirect URI; defaults to the request's). The sign-in page is static, so a change to the Google variables takes effect on the next deploy.
+
+Google Cloud Console: create an OAuth client of type **Web application** with the authorized redirect URIs `https://diablo.pnoia.dev/api/auth/google/callback` and `http://localhost:3123/api/auth/google/callback`. Scopes: `openid`, `email`, `profile`.
 
 ## Where things are
 
 | Path | What it is |
 | --- | --- |
-| `src/app/page.tsx` | Entrance: burgundy, the mark reveals itself (full once per browser, short after), "Enter demo workspace" |
+| `src/app/page.tsx` | Sign-in: burgundy, the mark reveals itself (full once per browser, short after), then a glass card with Continue with Google and Enter demo workspace |
 | `src/app/(app)/home` | Home: "What do you want to find out?", the composer, starters, recent investigations |
 | `src/app/(app)/investigations/[id]` | Workspace: Session, Overview, Graph, Evidence and Report tabs, and the experiment panel |
 | `src/app/(app)/{systems,experiments,datasets,evidence,reports,settings}` | Library pages and settings |
 | `src/app/legal/*` | Terms, Privacy and Usage drafts (pending legal review) |
-| `src/proxy.ts` | Real 404s for investigation URLs that cannot exist |
+| `src/proxy.ts` | Route protection (see "Sign-in") and real 404s for investigation URLs that cannot exist |
 | `src/lib/brand.ts` | Product name, legal entity and contact details (open decisions, one place) |
 | `src/lib/stats.ts` | Wilson, Newcombe, z-test, Fisher, McNemar, Cohen's h, bootstrap, Holm, formatting |
 | `src/lib/validity.ts` | Validity checks C1–C9 and evidence strength (rubric v0, draft) |
