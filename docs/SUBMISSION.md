@@ -4,15 +4,15 @@
 
 - Live demo: https://diablo.pnoia.dev (click "Enter demo workspace"; no account needed)
 - Code: https://github.com/wcissor/diablo
-- Every number in this document is reproduced by `npm test` (`src/lib/submission-claims.test.ts`).
+- Every statistic below is reproduced by `npm test` (`src/lib/submission-claims.test.ts`); cost figures are labelled estimates.
 
 ## Summary
 
-**Problem.** Teams that ship AI change prompts, models, temperatures, tools and retrieval every week. When quality drops, an eval dashboard says *that* a score moved. It does not say which change caused it, or whether the drop is real or noise. **Who has it.** Every company that integrates AI: a telecom such as Azercell running a support assistant, a startup shipping an agent, a frontier lab such as Anthropic or OpenAI comparing model versions. These are target segments; none of them is a customer or partner. **What Diablo does.** It turns a question ("why did it get worse?") into competing hypotheses and controlled experiments. It then gives a verdict per hypothesis, with an effect size, a 95% confidence interval, an exact test and a validity grade, and every claim traces back to raw outputs. The rule: **the AI reasons, the system measures.** The model proposes; it can never write a number. **Proof.** The live prototype runs the full loop on demo data. Its statistics engine is real and checked against SciPy reference values: 51 unit tests and 26 end-to-end tests pass. **Next.** Put a real reasoning model (GLM-5.3) and a real target-system connector behind the existing provider interface, then run the first investigation on a live system.
+**Problem.** Teams that ship AI change prompts, models, tools and retrieval every week. When quality drops, an eval dashboard says *that* a score moved, not which change caused it or whether the drop is real. **Who has it.** Every company that integrates AI: a telecom such as Azercell running a support assistant, a startup shipping an agent, a frontier lab such as Anthropic or OpenAI comparing model versions. (Target segments only; none is a customer or partner.) **What Diablo does.** It turns a question ("why did it get worse?") into competing hypotheses and controlled experiments. Each hypothesis gets a verdict with an effect size, a 95% confidence interval, an exact test and a validity grade, traceable to raw outputs. The rule: **the AI reasons, the system measures**; the model can never write a number. **Proof.** The live prototype runs the full loop on demo data. Its statistics engine is real and checked against SciPy reference values: 51 unit tests and 26 end-to-end tests pass. **Next.** Put a real reasoning model (GLM-5.3) and a real target-system connector behind the existing provider interface, then run the first investigation on a live system.
 
 ## 1. Value for the user
 
-**The specific problem.** An assistant's accuracy drops after a release that changed two things. The team needs to know which change to revert, and needs proof that holds up in review.
+**The specific problem.** Accuracy drops after a release that changed two things. Which one do you revert, with proof that survives review?
 
 **Worked example** (illustrative, not customer data; computed by the repo's own `stats.ts`). The same 80 prompts, scored correct or incorrect, are compared pairwise against the baseline (69 of 80 correct):
 
@@ -27,34 +27,34 @@ The CI is a paired bootstrap: 2,000 resamples, seed 1. Discordant pairs: E1 b = 
 
 ## 2. Prototype and use of AI
 
-**The core scenario works end to end in the browser.** Ask a question. Diablo drafts hypotheses and experiments, runs them (simulated), collects evidence, analyses it and concludes. You can then replicate a result, flag a score, read the raw trace and print the report.
+**The core scenario works end to end in the browser:** ask a question; Diablo drafts hypotheses and experiments, runs them (simulated), analyses the evidence and concludes; replicate, flag a score, open the raw trace, print the report.
 
 | Works today (live, tested) | Next (not built yet) |
 |---|---|
-| Investigation workspace: Overview, Graph, Evidence, Report and Session tabs; experiment panel with design, config diff, effect, test and reproducibility | Real reasoning model in the loop (GLM-5.3 planned) |
+| Investigation workspace (Overview, Graph, Evidence, Report, Session) and an experiment panel (design, config diff, effect, test, reproducibility) | Real reasoning model in the loop (GLM-5.3 planned) |
 | Statistics engine: Wilson, Newcombe, two-proportion z, Fisher exact, exact McNemar, seeded paired bootstrap, Cohen's h, Holm | Connector that runs a customer's AI system (API endpoint plus config) |
 | Validity rubric C1–C9 and an evidence-strength grade; "Not recorded" is never a pass | Persistent knowledge across investigations |
 | Verdicts and statuses derived from counts, never typed in | Sample-size planning before a run |
-| Rule-based demo agent covering 7 topics (sycophancy, refusal, tool use, long context, calibration, hallucination, instruction following); seeded simulator | Autonomous monitoring ("something changed; investigate") |
+| Rule-based demo agent (7 topics) and a seeded run simulator | Autonomous monitoring ("something changed; investigate") |
 | Report export (print/PDF, JSON), chart export (CSV, SVG) | |
-| **In progress, not merged:** Python engine with a Gemini provider that turns a question into an experiment plan (branch `feat/gemini-provider`, tests run without a key or network); Google sign-in and protected routes (branch `feat/auth`) | |
+| **In progress, not merged:** Python engine whose Gemini provider turns a question into an experiment plan (`feat/gemini-provider`); Google sign-in (`feat/auth`) | |
 
-**What the AI contributes, and what it may not do.** The reasoning model does the work an experienced evaluator does:
+**What the AI contributes.** The reasoning model does an experienced evaluator's work:
 
 - turn a vague question into testable hypotheses, including a competing explanation;
 - choose the experiment that separates them (an ablation, a sweep, a paired comparison);
 - read the results and propose the next experiment;
 - write the report.
 
-The system does everything numeric: it runs the target, counts outcomes and computes every rate, interval, p-value and verdict from those counts. The AI cannot invent a number, and the code is built to enforce that. Fixtures store counts only, and `derive.ts` computes the rest at render time. In the interface, interpretation is set in a different typeface after an "Interpretation" label, so reasoning never looks like measurement. In today's demo a rule-based agent plays the reasoning role. We say this on screen ("Demo data") and here, so the measurement half can be judged on its own.
+The system does everything numeric: it runs the target, counts outcomes and computes every rate, interval, p-value and verdict from those counts. The code enforces this: fixtures store counts only, `derive.ts` computes the rest at render time, and interpretation is set in a different typeface under an "Interpretation" label. In today's demo a rule-based agent plays the reasoning role; the app says "Demo data" on screen.
 
 ## 3. Quality testing
 
 **Commands run on 9 Oct 2026:** `npm test` gave 51 passed; `npx playwright test` (production build) gave 26 passed; `npm run typecheck` and `npm run lint` are clean.
 
 - **Statistics against references.** The Wilson, Newcombe, z-test, Fisher, McNemar and Holm results match SciPy/statsmodels values to within 5×10⁻⁵ (`src/lib/stats.test.ts`).
-- **Rubric and derivations.** Missing fields never pass. A judge from the target's own model family fails. Every CI contains its Δ. A running experiment has no result. The simulator is deterministic per run id.
-- **End to end.** Ask, run, replicate, flag; keyboard navigation; real 404s; recovery from corrupt storage; the report prints to more than one page. axe reports 0 serious or critical issues on 18 routes, in light and dark, at 375 and 1440 px.
+- **Rubric and derivations.** Missing fields never pass; every CI contains its Δ; the simulator is deterministic.
+- **End to end.** Ask, run, replicate, flag, keyboard use, real 404s, corrupt-storage recovery, multi-page print; axe: 0 serious or critical issues on 18 routes, light and dark, 375 and 1440 px.
 
 **Failure examples: what goes wrong without Diablo, and what it catches.** All are pinned in `submission-claims.test.ts`.
 
@@ -64,7 +64,7 @@ The system does everything numeric: it runs the target, counts outcomes and comp
 4. **A result that does not replicate.** A reversed replication fails C8, and "Strong" drops to "Moderate".
 5. **A judge grading its own family.** C4 fails, and the evidence becomes "Weak".
 
-**Known failures of the prototype itself.** The demo agent recognises 7 topics by keyword; any other question becomes a clearly labelled "Template draft". The Session tab declines questions it cannot answer from the investigation's data ("I can't answer that in demo mode"). Runs are simulated, and tokens and cost show "Not recorded".
+**Known failures of the prototype itself.** The demo agent recognises 7 topics by keyword; anything else becomes a labelled "Template draft". The Session tab declines questions its data cannot answer. Runs are simulated; tokens and cost show "Not recorded".
 
 **Compared with the current approach** (what each gives by default):
 
@@ -81,9 +81,9 @@ The system does everything numeric: it runs the target, counts outcomes and comp
 
 **Data requirements.** No training data and no fine-tuning. A customer provides:
 
-1. access to the AI system: an API endpoint, plus the config of each version (model, system prompt, temperature, tools);
-2. an evaluation set of prompts, at least 30 per arm under the rubric (the demo uses 80 to 600), taken from production logs or an existing eval set;
-3. a scorer: a rule (exact match, JSON-schema check) or an LLM judge from a different model family, checked against human labels (the demo uses 200; draft threshold: agreement ≥ 0.80).
+1. API access to the AI system and each version's config (model, prompt, temperature, tools);
+2. prompts from production logs or an existing eval set, at least 30 per arm (the demo uses 80 to 600);
+3. a scorer: a rule (exact match, JSON schema) or an LLM judge from another model family, checked against human labels (draft threshold: agreement ≥ 0.80).
 
 **Running cost** (estimate; assumptions stated, GLM-5.3 list prices per 1M tokens: $1.40 input, $0.26 cached input, $4.40 output). Assume one investigation takes 12 reasoning steps, each with 10k new input tokens, 20k cached context and 2k output tokens:
 
@@ -91,15 +91,15 @@ The system does everything numeric: it runs the target, counts outcomes and comp
 - glm-5.3-flash ($0.15 / $0.03 / $0.50): $0.018 + $0.007 + $0.012 ≈ **$0.04**.
 - LLM judging of the worked example on flash: 320 outputs × (1k input + 100 output tokens) = 0.32M × $0.15 + 0.032M × $0.50 ≈ **$0.06**.
 
-The customer's own model calls are extra and depend on their system. Statistics run locally, in milliseconds, for free.
+The customer's own model calls are extra. Statistics run locally at no cost.
 
-**Stack.** A Next.js 16 app on Vercel (live). All data access goes through one typed `DataProvider` interface (`src/lib/data/provider.ts`); today its only implementation is the in-browser mock. A Python engine is in progress.
+**Stack.** Next.js 16 on Vercel (live). All data access goes through one typed `DataProvider` interface (`src/lib/data/provider.ts`), so the in-browser mock can be swapped for a real backend.
 
 **Next step (plan).** Implement an engine-backed `DataProvider`. GLM-5.3 returns hypotheses and experiment designs as JSON, which is validated with the existing zod schemas. Runs call the target system, and `stats.ts` remains the only source of numbers. Then run the first investigation on a real open-weights model and publish the report.
 
 ## 5. Originality
 
 - **A new job, not a new dashboard.** Eval tools score and observability tools trace. Diablo *investigates*: question → competing hypotheses → controlled experiments → verdicts. It answers "why", not just "what".
-- **"The AI reasons. The system measures."** The separation is enforced in the code and on screen, so an LLM's fluency cannot leak into the numbers.
-- **Evidence has a grade.** Every conclusion carries an evidence strength from an explicit rubric: control, sample size, randomisation, judge independence, human agreement, multiple comparisons, replication and competing hypotheses.
-- **Where it goes.** Every investigation is meant to leave knowledge behind: known failure modes, causes, and fixes that worked or failed. Later, Diablo should notice regressions on its own and apply the same loop to improve its own research strategy, with every change explicit, testable, reversible and auditable.
+- **"The AI reasons. The system measures."** Enforced in code and on screen, so an LLM's fluency cannot leak into the numbers.
+- **Evidence has a grade.** Every conclusion carries a strength from an explicit nine-check rubric (control, sample size, randomisation, judge independence, human agreement, multiplicity, replication, competing hypotheses).
+- **Where it goes (vision, not built).** Every investigation leaves knowledge behind: failure modes, causes, fixes that worked or failed. Later Diablo notices regressions by itself and applies the same loop to its own research strategy, with every change explicit, testable, reversible and auditable.

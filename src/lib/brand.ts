@@ -13,7 +13,8 @@ export const BRAND = {
   name: "Diablo AI",
   shortName: "Diablo",
   tagline: "Investigate intelligence.",
-  description: "A research environment for investigating, testing and understanding AI systems.",
+  description:
+    "Diablo AI lets companies understand what is actually happening inside their AI systems: which change moved a score, and how sure they can be.",
 
   /** Legal and contact details: placeholders until the owner decides. */
   legalEntity: PLACEHOLDER,
