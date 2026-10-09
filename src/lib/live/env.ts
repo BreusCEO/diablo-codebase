@@ -73,7 +73,7 @@ export function readCaps(env: Env): LiveCaps {
 export function readLimits(env: Env): AbuseLimits {
   return {
     dailyCallCap: intEnv(env, "LIVE_DAILY_CALL_CAP", 500, 0, 100_000),
-    cooldownMs: intEnv(env, "LIVE_COOLDOWN_SECONDS", 60, 0, 3600, 1000),
+    cooldownMs: intEnv(env, "LIVE_COOLDOWN_SECONDS", 60_000, 0, 3_600_000, 1000),
     maxConcurrentRuns: intEnv(env, "LIVE_MAX_CONCURRENT_RUNS", 2, 1, 4),
   };
 }

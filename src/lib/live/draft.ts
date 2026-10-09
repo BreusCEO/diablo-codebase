@@ -160,7 +160,7 @@ export async function draftPlan({ llm, caps, signal, onAttempt }: DraftOptions):
   const messages: LLMMessage[] = [{ role: "user", content: QUESTION }];
   let lastProblems: string[] = [];
   for (let attempt = 1; attempt <= MAX_DRAFT_CALLS; attempt++) {
-    const res = await llm.complete({ system, messages, json: true, maxTokens: 8192, signal, timeoutMs: caps.reasoningTimeoutMs });
+    const res = await llm.complete({ system, messages: [...messages], json: true, maxTokens: 8192, signal, timeoutMs: caps.reasoningTimeoutMs });
     const json = extractJson(res.text);
     const result = json.ok ? validatePlan(json.value, caps) : { ok: false as const, problems: [json.error] };
     onAttempt?.(attempt, result.ok, result.ok ? [] : result.problems);

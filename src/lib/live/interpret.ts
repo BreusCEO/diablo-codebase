@@ -57,7 +57,7 @@ export async function interpret({ llm, inv, plan, analysis, caps, signal, onAtte
   for (let attempt = 1; attempt <= MAX_INTERPRET_CALLS; attempt++) {
     let reply: string;
     try {
-      const res = await llm.complete({ system, messages, json: true, maxTokens: 4096, signal, timeoutMs: caps.reasoningTimeoutMs });
+      const res = await llm.complete({ system, messages: [...messages], json: true, maxTokens: 4096, signal, timeoutMs: caps.reasoningTimeoutMs });
       reply = res.text;
     } catch (e) {
       if (e instanceof LLMError && e.kind === "aborted") throw e;
