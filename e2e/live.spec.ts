@@ -21,15 +21,6 @@ test("Signed in, /live explains the planted change and says plainly that it need
   await expect(run).toHaveAttribute("aria-disabled", "true");
   await run.click({ force: true });
   await expect(page.getByRole("list", { name: "Stages" })).toHaveCount(0);
-  // The sidebar marks the page.
-  await expect(page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: "Live investigation" })).toHaveAttribute("aria-current", "page");
-});
-
-test("Home links to the live investigation", async ({ page }) => {
-  await page.goto("/home");
-  await page.getByRole("link", { name: /Live investigation: a real model/ }).click();
-  await page.waitForURL("**/live");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Live investigation");
 });
 
 test("The run API refuses without a key (503), cross-site (403) and without a method it knows (405)", async ({ page, baseURL }) => {

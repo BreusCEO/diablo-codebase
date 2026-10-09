@@ -5,6 +5,7 @@ import { Investigation } from "@/components/home/Investigation";
 import { Knowledge } from "@/components/home/Knowledge";
 import { Loop } from "@/components/home/Loop";
 import { Principle } from "@/components/home/Principle";
+import { SiteIntro } from "@/components/home/SiteIntro";
 import { pageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = pageMetadata({
@@ -16,6 +17,7 @@ export const metadata: Metadata = pageMetadata({
 export default function HomePage() {
   return (
     <>
+      <SiteIntro />
       <Hero />
       <Loop />
       <Principle />

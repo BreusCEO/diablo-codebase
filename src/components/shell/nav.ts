@@ -1,4 +1,4 @@
-import { Activity, BookOpen, Cpu, Database, FileText, FlaskConical, House, Microscope, Settings, type LucideIcon } from "lucide-react";
+import { Activity, Database, House, Microscope, Settings, type LucideIcon } from "lucide-react";
 
 export type NavItem = { href: string; label: string; icon: LucideIcon };
 
@@ -15,11 +15,6 @@ export const LIVE: NavItem = { href: "/live", label: "Live investigation", icon:
 export const PRIMARY: NavItem[] = [
   HOME,
   INVESTIGATIONS,
-  LIVE,
-  { href: "/systems", label: "AI systems", icon: Cpu },
-  { href: "/experiments", label: "Experiments", icon: FlaskConical },
-  { href: "/evidence", label: "Evidence", icon: BookOpen },
-  { href: "/reports", label: "Reports", icon: FileText },
 ];
 
 export const SECONDARY: NavItem[] = [
@@ -27,8 +22,8 @@ export const SECONDARY: NavItem[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-/** Everything after Home and Investigations: the library pages. */
-export const LIBRARY: NavItem[] = [...PRIMARY.slice(3), SECONDARY[0]];
+/** The library pages reachable from the command palette. */
+export const LIBRARY: NavItem[] = [SECONDARY[0]];
 
 export const LEGAL = [
   { href: "/legal/terms", label: "Terms of Service", short: "Terms" },

@@ -22,7 +22,7 @@ import { sortInvestigations, systemName, useWorkspace } from "@/lib/data";
 import { investigationStatus } from "@/lib/data/derive";
 import { isSidebarCollapsed, setMotionPref, setSidebarCollapsed, setThemePref, useMotionPref, useResolvedTheme } from "@/lib/prefs";
 import { ui, useUI } from "@/lib/ui";
-import { INVESTIGATIONS, LEGAL, LIBRARY, LIVE } from "./nav";
+import { INVESTIGATIONS, LEGAL, LIBRARY } from "./nav";
 
 /**
  * Command palette (Ctrl/⌘+K). cmdk gives combobox/listbox semantics and
@@ -107,7 +107,7 @@ function PaletteBody() {
         )}
 
         <Command.Group heading="Go to" className={group}>
-          {[{ href: "/home", label: "Home", icon: CornerDownLeft }, INVESTIGATIONS, LIVE, ...LIBRARY].map((n) => {
+          {[{ href: "/home", label: "Home", icon: CornerDownLeft }, INVESTIGATIONS, ...LIBRARY].map((n) => {
             const Icon = n.icon;
             return (
               <Command.Item key={n.href} className={item} value={`Go to ${n.label}`} onSelect={() => go(n.href)}>

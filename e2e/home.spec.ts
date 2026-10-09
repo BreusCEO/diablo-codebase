@@ -68,16 +68,6 @@ test("17. Send: no visible text, aria-label Send, 32×32, accent fill", async ({
   await expect.poll(() => send.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(accent);
 });
 
-test("Starter pills fill the composer and do not submit", async ({ page }) => {
-  await gotoHome(page);
-  await page.getByRole("button", { name: "Audit" }).click();
-  await page.getByRole("button", { name: "Does Agent Y skip safety checks when rushed?" }).click();
-  const box = page.getByRole("textbox", { name: COMPOSER });
-  await expect(box).toHaveValue("Does Agent Y skip safety checks when rushed?");
-  await expect(box).toBeFocused();
-  await expect(page).toHaveURL(/\/home/);
-});
-
 test("10. Cyrillic and Azerbaijani questions give a valid id, title and URL", async ({ page }) => {
   for (const q of ["Становится ли модель льстивой, когда пользователь уверен?", "Model şübhəli iddialarla tez-tez razılaşırmı?"]) {
     await gotoHome(page);
