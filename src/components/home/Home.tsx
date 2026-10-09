@@ -25,19 +25,22 @@ export function Home() {
 
   return (
     <>
-      {/* A burgundy-and-black glow rising from the bottom of the page. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[70vh]"
-        style={{
-          background: [
-            // Near-black at the very bottom, drawn over…
-            "linear-gradient(to bottom, transparent 35%, rgb(12 4 7 / 0.55) 80%, rgb(8 2 4 / 0.85) 100%)",
-            // …a deep burgundy glow rising from below.
-            "radial-gradient(130% 85% at 50% 115%, rgb(87 0 26 / 0.95) 0%, rgb(87 0 26 / 0.6) 30%, rgb(87 0 26 / 0.18) 55%, transparent 75%)",
-          ].join(", "),
-        }}
-      />
+      {/* A burgundy horizon: a dome rising from the bottom, lit along its rim, fading to black. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-[62vh] overflow-hidden">
+        {/* The glow above the rim. */}
+        <div
+          className="absolute left-1/2 top-[18%] h-[60%] w-[120%] -translate-x-1/2 rounded-[50%] blur-3xl"
+          style={{ background: "radial-gradient(closest-side, rgb(87 0 26 / 0.55), transparent)" }}
+        />
+        {/* The dome itself. */}
+        <div
+          className="absolute left-1/2 top-[34%] h-[160%] w-[170%] -translate-x-1/2 rounded-[50%]"
+          style={{
+            background: "linear-gradient(to bottom, rgb(122 10 46) 0%, rgb(87 0 26) 12%, rgb(40 0 12) 34%, rgb(10 2 5) 60%)",
+            boxShadow: "0 -1px 0 rgb(231 166 184 / 0.35), 0 -30px 90px rgb(87 0 26 / 0.55)",
+          }}
+        />
+      </div>
       <div className="relative mx-auto flex min-h-full w-full max-w-[720px] flex-col px-4 pb-8 pt-[clamp(48px,18vh,168px)] sm:px-6">
         <h1 className="rise text-center text-[30px] font-semibold leading-[38px] tracking-[-0.022em] text-ink sm:text-[32px] sm:leading-[40px]">
           What do you want to find out?
