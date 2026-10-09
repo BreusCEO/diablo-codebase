@@ -84,6 +84,12 @@ test.describe("signed out", () => {
     await ctx.clearCookies();
     await page.goto("/?error=state_mismatch");
     await expect(page.locator("main [role=alert]")).toContainText("expired");
+    // A crafted code that names an Object.prototype key is just an unknown error, not a blank page.
+    for (const code of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
+      await page.goto(`/?error=${code}`);
+      await expect(page.locator("main [role=alert]"), code).toContainText("Something went wrong");
+      await expect(page.getByRole("button", { name: "Enter demo workspace" }), code).toBeVisible();
+    }
     await ctx.close();
   });
 
@@ -93,13 +99,18 @@ test.describe("signed out", () => {
       if (m.type() === "error" || m.type() === "warning") messages.push(`${page.url()}: ${m.text()}`);
     });
     page.on("pageerror", (e) => messages.push(`${page.url()}: ${e.message}`));
-    for (const route of ["/", "/?next=%2Fsettings", "/?error=access_denied&next=%2Fsettings", "/?error=made-up", "/?next=a&next=b"]) {
+    const crafted = ["/?error=__proto__", "/?error=constructor", "/?error=toString", "/?error=hasOwnProperty"];
+    for (const route of ["/", "/?next=%2Fsettings", "/?error=access_denied&next=%2Fsettings", "/?error=made-up", "/?next=a&next=b", ...crafted]) {
       await page.goto(route);
       await page.waitForLoadState("networkidle");
     }
-    // An unknown error code still explains itself, in general terms.
-    await page.goto("/?error=made-up");
-    await expect(page.locator("main [role=alert]")).toContainText("Something went wrong");
+    // An unknown error code still explains itself, in general terms, including
+    // codes that name Object.prototype keys.
+    for (const route of ["/?error=made-up", ...crafted]) {
+      await page.goto(route);
+      await expect(page.locator("main [role=alert]"), route).toContainText("Something went wrong");
+      await expect(page.getByRole("button", { name: "Enter demo workspace" }), route).toBeVisible();
+    }
     expect(messages, messages.join("\n")).toEqual([]);
   });
 
