@@ -33,6 +33,17 @@ export function LiveInvestigation({ config }: { config: LivePublicConfig }) {
   // Leaving the page cancels a run in progress: no model calls nobody will see.
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // Arriving from Home with a question (?q=...) starts the run straight away.
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current || !config.configured) return;
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (!q) return;
+    autoStarted.current = true;
+    void start();
+     
+  }, [config.configured]);
+
   async function start() {
     abortRef.current?.abort();
     const ctrl = new AbortController();
@@ -42,7 +53,7 @@ export function LiveInvestigation({ config }: { config: LivePublicConfig }) {
       const res = await fetch("/api/live/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: "{}",
+        body: JSON.stringify(runRequest()),
         signal: ctrl.signal,
         cache: "no-store",
       });
@@ -418,4 +429,15 @@ function NotConfigured({ config }: { config: LivePublicConfig }) {
       </div>
     </div>
   );
+}
+
+/** What the browser asks for: the question from Home, and Gemini if a team member switched it on in Settings (the server decides). */
+function runRequest(): { reasoner?: "gemini"; objective?: string } {
+  const out: { reasoner?: "gemini"; objective?: string } = {};
+  try {
+    if (localStorage.getItem("diablo.reasoner") === "gemini") out.reasoner = "gemini";
+  } catch {}
+  const q = new URLSearchParams(window.location.search).get("q");
+  if (q) out.objective = q.slice(0, 400);
+  return out;
 }

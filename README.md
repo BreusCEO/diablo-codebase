@@ -158,6 +158,17 @@ The run API (`POST /api/live/run`, Node runtime) streams NDJSON events: `start`,
 - Tested without a key: the whole pipeline runs in unit tests against a scripted fake model and a fake target (`src/lib/live/*.test.ts`), and all three adapters are tested against mocked `fetch` (request shape, response parsing, error classification, retries, timeouts, no key leakage). No key was available while this was built, so the live path has not yet been run against the real Claude, Gemini or Z.ai API; the Claude adapter follows the Claude API docs as read on 9 Oct 2026 but has never received a real response, and the Z.ai adapter in particular is kept small and only covered by mocked tests.
 - Results are kept in the browser tab only (the API stores nothing). One target model and one seeded item set: a result holds for that setup.
 
+## Not yet implemented
+
+Against `DIABLO_ENGINE_PROMPT.md`, honestly:
+
+- **Persistence:** no server database. Sessions, events, evidence and knowledge do not survive outside the browser; no crash-resume.
+- **Experiment types:** only paired A/B ablation on the planted-change testbed (Helper v1/v2). Probe sets, regression diff on user targets, perturbation, consistency and counterexample search are not built.
+- **Targets:** only the built-in model-API testbed. HTTP agents, Python callables and Hugging Face targets are not built.
+- **Agents:** planner and analyst roles are covered by the draft and interpret steps; separate critic, improver, verifier and librarian agents are not built.
+- **Improve → verify loop, knowledge base, claim linter for full reports, Hugging Face export and training scaffolding, `diablo bench` for the live engine:** not built. (`npm run bench` measures the statistical protocol on simulated data.)
+- **LLM judges:** not used; all scoring is programmatic.
+
 ## Principles
 
 - Burgundy `#57001A` and cream `#FCF8EF` come from the mark. Burgundy is an accent inside the app (primary buttons, Send, the active row and tab, the selected graph node, the running dot and running edges, links in prose, the focus ring) and the surface of the entrance only.

@@ -28,6 +28,8 @@ export interface InvestigateOptions {
   now?: () => number;
   /** The meter to fill; pass one to read the calls made even when the run fails. */
   usage?: Usage;
+  /** The researcher's question (optional); it frames the hypotheses. */
+  objective?: string;
 }
 
 /**
@@ -94,6 +96,7 @@ export async function investigate(opts: InvestigateOptions): Promise<LiveResult>
       llm: reasoningDraft,
       caps: opts.caps,
       signal: opts.signal,
+      objective: opts.objective,
       onAttempt: (attempt, ok, problems) => emit({ type: "draft-attempt", attempt, ok, problems }),
     });
     const planned = now();
