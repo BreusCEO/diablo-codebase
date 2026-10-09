@@ -25,10 +25,7 @@ export const CLOCK_TOLERANCE_SECONDS = 60;
 export type AuthErrorCode = "google_unavailable" | "access_denied" | "state_mismatch" | "exchange_failed" | "unverified_email" | "server_error";
 
 export class AuthFlowError extends Error {
-  constructor(
-    public readonly code: AuthErrorCode,
-    message?: string,
-  ) {
+  constructor(public readonly code: AuthErrorCode, message?: string) {
     super(message ?? code);
     this.name = "AuthFlowError";
   }
