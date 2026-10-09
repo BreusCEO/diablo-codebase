@@ -32,7 +32,7 @@ export function project(velocity: number, decelerationRate = 0.998) {
 }
 
 /** The same deceleration as an inertia animation, for things that coast freely (the flywheel). */
-export const COAST = { type: "inertia" as const, power: project(1000), timeConstant: -1 / Math.log(0.998) };
+export const COAST = { type: "inertia" as const, power: project(1), timeConstant: -1 / Math.log(0.998) };
 
 /** Past a boundary, follow less and less: real things slow before they stop. */
 export function rubberband(overshoot: number, dimension: number, constant = 0.55) {

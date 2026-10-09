@@ -18,6 +18,8 @@ const STEPS = [
 const N = STEPS.length;
 const STEP = 360 / N;
 const mod = (a: number, n: number) => ((a % n) + n) % n;
+/** Server and browser disagree on the last digit of sin/cos; round so hydration matches. */
+const r3 = (x: number) => Math.round(x * 1000) / 1000;
 /** The step that sits under the marker at the top for a given rotation. */
 const indexAt = (rot: number) => mod(Math.round(-rot / STEP), N);
 
@@ -162,10 +164,10 @@ function Dial() {
               return (
                 <line
                   key={i}
-                  x1={Math.sin(a) * r0}
-                  y1={-Math.cos(a) * r0}
-                  x2={Math.sin(a) * 90}
-                  y2={-Math.cos(a) * 90}
+                  x1={r3(Math.sin(a) * r0)}
+                  y1={r3(-Math.cos(a) * r0)}
+                  x2={r3(Math.sin(a) * 90)}
+                  y2={r3(-Math.cos(a) * 90)}
                   stroke={major ? "var(--ink-3)" : "var(--line-strong)"}
                   strokeWidth={major ? 0.7 : 0.5}
                 />
@@ -176,7 +178,7 @@ function Dial() {
             const a = (i * STEP * Math.PI) / 180;
             const on = i === active;
             return (
-              <div key={s.name} className="absolute" style={{ left: `${50 + Math.sin(a) * 40}%`, top: `${50 - Math.cos(a) * 40}%` }}>
+              <div key={s.name} className="absolute" style={{ left: `${r3(50 + Math.sin(a) * 40)}%`, top: `${r3(50 - Math.cos(a) * 40)}%` }}>
                 <motion.span
                   data-step={i}
                   style={{ rotate: upright, x: "-50%", y: "-50%" }}
