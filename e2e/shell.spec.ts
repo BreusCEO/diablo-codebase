@@ -121,10 +121,14 @@ test("12. Legal pages: account menu, sign-in, Home footer, mobile drawer; one h1
   await page.waitForURL(/\/legal\/privacy/);
   await expect(page.locator("h1:visible")).toHaveCount(1);
 
-  await page.goto("/");
-  await page.getByRole("link", { name: "Terms of Service" }).click();
-  await page.waitForURL(/\/legal\/terms/);
-  await expect(page.locator("h1:visible")).toHaveCount(1);
+  // Sign-in is for signed-out visitors (signed-in ones go straight to /home).
+  const out = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  const signIn = await out.newPage();
+  await signIn.goto("/");
+  await signIn.getByRole("link", { name: "Terms of Service" }).click();
+  await signIn.waitForURL(/\/legal\/terms/);
+  await expect(signIn.locator("h1:visible")).toHaveCount(1);
+  await out.close();
 
   await gotoHome(page);
   await page.locator("footer").getByRole("link", { name: "Usage policy" }).click();

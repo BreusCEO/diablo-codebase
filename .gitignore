@@ -44,3 +44,9 @@ next-env.d.ts
 /qa/tmp
 /test-results
 /playwright-report
+
+# signed-in Playwright state
+/e2e/.auth
+
+# env files: .env.example is documentation and is committed
+!.env.example
