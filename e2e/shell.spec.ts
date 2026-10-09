@@ -132,7 +132,8 @@ test("12. Legal pages: account menu, sign-in, Home footer, mobile drawer; one h1
   await out.close();
 
   await gotoHome(page);
-  await page.locator("footer").getByRole("link", { name: "Usage policy" }).click();
+  await page.getByRole("button", { name: /^Account:/ }).click();
+  await page.getByRole("menuitem", { name: "Usage Policy" }).click();
   await page.waitForURL(/\/legal\/usage/);
   await expect(page.locator("h1:visible")).toHaveCount(1);
 
