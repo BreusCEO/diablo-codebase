@@ -66,6 +66,7 @@ export const config = {
     "/",
     "/home/:path*",
     "/investigations/:path*",
+    "/live/:path*",
     "/systems/:path*",
     "/experiments/:path*",
     "/evidence/:path*",

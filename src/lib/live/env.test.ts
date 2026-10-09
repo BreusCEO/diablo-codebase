@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CAP_LIMITS, maxCalls } from "./budget";
-import { DEFAULT_MODELS, liveConfig, providerKey, publicConfig } from "./env";
+import { liveConfig, providerKey, publicConfig } from "./env";
+import { DEFAULT_MODELS } from "./providers";
 
 describe("live env: provider pick", () => {
   it("is not configured without a key, and says why", () => {
