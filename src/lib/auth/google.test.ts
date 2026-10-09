@@ -155,6 +155,16 @@ describe("flow cookie and state", () => {
     expect(code(() => checkCallback(new URLSearchParams({ error: "access_denied", state: "s1" }), null))).toBe("access_denied");
     expect(code(() => checkCallback(new URLSearchParams({ error: "server_error" }), null))).toBe("server_error");
   });
+
+  it("keeps an attacker's ?error= out of the log as anything but one short token", () => {
+    try {
+      checkCallback(new URLSearchParams({ error: `x\n[auth] forged line ${"y".repeat(200)}` }), null);
+    } catch (e) {
+      expect((e as Error).message).toMatch(/^Google returned [\w.?-]{1,64}$/);
+      return;
+    }
+    throw new Error("expected checkCallback to throw");
+  });
 });
 
 describe("verifyIdToken (local key pair, mocked JWKS)", () => {

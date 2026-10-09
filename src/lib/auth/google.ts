@@ -117,7 +117,8 @@ export function sameToken(a: string, b: string): boolean {
  */
 export function checkCallback(params: URLSearchParams, flow: FlowState | null): { code: string; flow: FlowState } {
   const error = params.get("error");
-  if (error) throw new AuthFlowError(error === "access_denied" ? "access_denied" : "server_error", `Google returned ${error.slice(0, 64)}`);
+  // The value is attacker-controlled and ends up in the server log: keep it to one short, plain token.
+  if (error) throw new AuthFlowError(error === "access_denied" ? "access_denied" : "server_error", `Google returned ${error.replace(/[^\w.-]/g, "?").slice(0, 64)}`);
   const state = params.get("state");
   const code = params.get("code");
   if (!flow || !state || !sameToken(state, flow.state)) throw new AuthFlowError("state_mismatch");
