@@ -111,14 +111,20 @@ export function sameToken(a: string, b: string): boolean {
  * Checks the callback's query against the flow cookie. Returns the code to
  * exchange with the flow it belongs to, or throws an AuthFlowError naming
  * what went wrong.
+ *
+ * The state is checked first, even for Google's `?error=`: Google echoes the
+ * state on errors too (RFC 6749 §4.1.2.1), so an error without this flow's
+ * state did not come from this flow, and anyone can link to the callback.
+ * `state_mismatch` therefore means "not this flow's answer", and the route
+ * leaves the visitor's flow cookie alone for it.
  */
 export function checkCallback(params: URLSearchParams, flow: FlowState | null): { code: string; flow: FlowState } {
+  const state = params.get("state");
+  if (!flow || !state || !sameToken(state, flow.state)) throw new AuthFlowError("state_mismatch");
   const error = params.get("error");
   // The value is attacker-controlled and ends up in the server log: keep it to one short, plain token.
   if (error) throw new AuthFlowError(error === "access_denied" ? "access_denied" : "server_error", `Google returned ${error.replace(/[^\w.-]/g, "?").slice(0, 64)}`);
-  const state = params.get("state");
   const code = params.get("code");
-  if (!flow || !state || !sameToken(state, flow.state)) throw new AuthFlowError("state_mismatch");
   if (!code) throw new AuthFlowError("exchange_failed", "No authorization code");
   return { code, flow };
 }

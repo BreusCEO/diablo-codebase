@@ -84,6 +84,12 @@ test.describe("signed out", () => {
     await ctx.clearCookies();
     await page.goto("/?error=state_mismatch");
     await expect(page.locator("main [role=alert]")).toContainText("expired");
+    // A crafted code that names an Object.prototype key is just an unknown error, not a blank page.
+    for (const code of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
+      await page.goto(`/?error=${code}`);
+      await expect(page.locator("main [role=alert]"), code).toContainText("Something went wrong");
+      await expect(page.getByRole("button", { name: "Enter demo workspace" }), code).toBeVisible();
+    }
     await ctx.close();
   });
 
@@ -93,13 +99,18 @@ test.describe("signed out", () => {
       if (m.type() === "error" || m.type() === "warning") messages.push(`${page.url()}: ${m.text()}`);
     });
     page.on("pageerror", (e) => messages.push(`${page.url()}: ${e.message}`));
-    for (const route of ["/", "/?next=%2Fsettings", "/?error=access_denied&next=%2Fsettings", "/?error=made-up", "/?next=a&next=b"]) {
+    const crafted = ["/?error=__proto__", "/?error=constructor", "/?error=toString", "/?error=hasOwnProperty"];
+    for (const route of ["/", "/?next=%2Fsettings", "/?error=access_denied&next=%2Fsettings", "/?error=made-up", "/?next=a&next=b", ...crafted]) {
       await page.goto(route);
       await page.waitForLoadState("networkidle");
     }
-    // An unknown error code still explains itself, in general terms.
-    await page.goto("/?error=made-up");
-    await expect(page.locator("main [role=alert]")).toContainText("Something went wrong");
+    // An unknown error code still explains itself, in general terms, including
+    // codes that name Object.prototype keys.
+    for (const route of ["/?error=made-up", ...crafted]) {
+      await page.goto(route);
+      await expect(page.locator("main [role=alert]"), route).toContainText("Something went wrong");
+      await expect(page.getByRole("button", { name: "Enter demo workspace" }), route).toBeVisible();
+    }
     expect(messages, messages.join("\n")).toEqual([]);
   });
 
@@ -114,10 +125,12 @@ test.describe("signed out", () => {
   });
 
   test("A failed callback shows an inline error on the sign-in page", async ({ page }) => {
-    await page.goto("/api/auth/google/callback?error=access_denied&state=x");
+    await page.goto("/api/auth/google/callback?error=access_denied");
     expect(new URL(page.url()).pathname).toBe("/");
-    // Without Google configured the callback refuses outright; with it, Google's own error is named.
-    await expect(page.locator("main [role=alert]")).toBeVisible();
+    // Google is not configured on the test server, so the callback refuses outright. With it
+    // configured, an ?error= without the flow's state is state_mismatch and Google's own error
+    // is named only for the flow's state (src/lib/auth/routes.test.ts covers both).
+    await expect(page.locator("main [role=alert]")).toContainText("Google sign-in isn't set up");
     await page.goto("/?error=state_mismatch");
     await expect(page.locator("main [role=alert]")).toContainText("expired");
   });

@@ -20,6 +20,16 @@ const ERRORS: Record<string, string> = {
 };
 
 /**
+ * The message for an `?error=` code. The code comes straight from the URL, so
+ * only the table's own keys count: `__proto__`, `constructor` and the like
+ * would otherwise reach Object.prototype and render as an object or nothing.
+ */
+function errorMessage(code: string | null): string | null {
+  if (!code) return null;
+  return Object.hasOwn(ERRORS, code) ? ERRORS[code] : ERRORS.server_error;
+}
+
+/**
  * The entrance (brand spec §19–23): burgundy, the cream mark revealing itself,
  * then the way in on a sheet of frosted glass. The reveal is full on a first
  * visit (the boot script sets data-reveal) and short afterwards; a click or
@@ -32,7 +42,7 @@ const ERRORS: Record<string, string> = {
 export function SignIn({ googleEnabled, next: requested, error: errorCode }: { googleEnabled: boolean; next: string; error: string | null }) {
   const reduce = useReduce();
   const next = safeNext(requested);
-  const error = errorCode ? (ERRORS[errorCode] ?? ERRORS.server_error) : null;
+  const error = errorMessage(errorCode);
   const [skipped, setSkipped] = useState(false);
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);

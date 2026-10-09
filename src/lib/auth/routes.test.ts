@@ -221,8 +221,32 @@ describe("GET /api/auth/google/callback", () => {
       const res = await callback(query, flow);
       expect(new URL(res.headers.get("location")!).searchParams.get("error")).toBe("state_mismatch");
       expect(setCookie(res, SESSION_COOKIE)).toBeUndefined();
+      // Not this flow's answer: the visitor's own sign-in in progress is left alone.
+      expect(setCookie(res, OAUTH_COOKIE)).toBeUndefined();
     }
     expect(calls).toEqual([]);
+  });
+
+  it("ignores a cross-site link to the callback: an ?error= without the flow's state neither cancels nor clears the flow", async () => {
+    withGoogle();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const calls = stubGoogle(await googleToken());
+    const links: Record<string, string>[] = [{ error: "access_denied" }, { error: "access_denied", state: "other" }, { error: "server_error" }];
+    for (const query of links) {
+      const res = await callback(query);
+      expect(res.headers.get("location"), JSON.stringify(query)).toBe(`${ORIGIN}/?error=state_mismatch&next=${encodeURIComponent(FLOW.next)}`);
+      expect(setCookie(res, OAUTH_COOKIE), JSON.stringify(query)).toBeUndefined();
+      expect(setCookie(res, SESSION_COOKIE), JSON.stringify(query)).toBeUndefined();
+    }
+    // Nothing reached Google, and nothing an outsider sends is written to the log.
+    expect(calls).toEqual([]);
+    expect(log).not.toHaveBeenCalled();
+
+    // The flow still completes when Google's real answer arrives.
+    const res = await callback({ code: "c0de", state: FLOW.state });
+    expect(res.headers.get("location")).toBe(`${ORIGIN}${FLOW.next}`);
+    expect(setCookie(res, SESSION_COOKIE)).toBeDefined();
+    flowCleared(res);
   });
 
   it("passes Google's own refusal on, and never redirects off-site from a tampered next", async () => {
@@ -230,6 +254,10 @@ describe("GET /api/auth/google/callback", () => {
     const denied = await callback({ error: "access_denied", state: FLOW.state });
     expect(new URL(denied.headers.get("location")!).searchParams.get("error")).toBe("access_denied");
     flowCleared(denied);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const failed = await callback({ error: "temporarily_unavailable", state: FLOW.state });
+    expect(new URL(failed.headers.get("location")!).searchParams.get("error")).toBe("server_error");
+    flowCleared(failed);
 
     // A flow cookie can only hold what we sealed, but the callback re-checks next anyway.
     stubGoogle(await googleToken());

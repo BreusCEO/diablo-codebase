@@ -151,14 +151,23 @@ describe("flow cookie and state", () => {
     expect(code(() => checkCallback(new URLSearchParams({ state: "s1" }), flow))).toBe("exchange_failed");
   });
 
-  it("maps Google's ?error= before anything else", () => {
-    expect(code(() => checkCallback(new URLSearchParams({ error: "access_denied", state: "s1" }), null))).toBe("access_denied");
-    expect(code(() => checkCallback(new URLSearchParams({ error: "server_error" }), null))).toBe("server_error");
+  it("maps Google's ?error= when it carries this flow's state", () => {
+    const flow = { state: "s1", verifier: "v", nonce: NONCE, next: "/home" };
+    expect(code(() => checkCallback(new URLSearchParams({ error: "access_denied", state: "s1" }), flow))).toBe("access_denied");
+    expect(code(() => checkCallback(new URLSearchParams({ error: "server_error", state: "s1" }), flow))).toBe("server_error");
+    expect(code(() => checkCallback(new URLSearchParams({ error: "access_denied", state: "s1", code: "c" }), flow))).toBe("access_denied");
+  });
+
+  it("treats an ?error= without this flow's state as someone else's link", () => {
+    const flow = { state: "s1", verifier: "v", nonce: NONCE, next: "/home" };
+    expect(code(() => checkCallback(new URLSearchParams({ error: "access_denied" }), flow))).toBe("state_mismatch");
+    expect(code(() => checkCallback(new URLSearchParams({ error: "access_denied", state: "s2" }), flow))).toBe("state_mismatch");
+    expect(code(() => checkCallback(new URLSearchParams({ error: "access_denied", state: "s1" }), null))).toBe("state_mismatch");
   });
 
   it("keeps an attacker's ?error= out of the log as anything but one short token", () => {
     try {
-      checkCallback(new URLSearchParams({ error: `x\n[auth] forged line ${"y".repeat(200)}` }), null);
+      checkCallback(new URLSearchParams({ error: `x\n[auth] forged line ${"y".repeat(200)}`, state: "s1" }), { state: "s1", verifier: "v", nonce: NONCE, next: "/home" });
     } catch (e) {
       expect((e as Error).message).toMatch(/^Google returned [\w.?-]{1,64}$/);
       return;
