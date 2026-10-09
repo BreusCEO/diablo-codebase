@@ -56,7 +56,7 @@ Each scenario is an update of an AI system from v1 to v2 that changed K candidat
 - **v1 accuracy** is drawn uniformly from 65% to 90%.
 - **The true cause** is one of the K factors, chosen uniformly (when the drop is above 0). Changing it lowers accuracy by exactly the drop; changing any other factor changes nothing.
 - **Items differ in difficulty.** Item i has a difficulty z_i ~ N(0, 1), shared by every run on that item. A run answers it correctly when Φ(√ρ·z_i + √(1−ρ)·e) < p, where e ~ N(0, 1) is that run's own noise and p is the arm's accuracy. The left side is uniform, so each arm's expected accuracy is exactly p (the planted effect is realised on average), while hard items stay hard across runs, so paired outcomes are positively correlated.
-- **The item correlation** ρ is drawn uniformly from 0.4 to 0.85, which gives a phi correlation of roughly 0.2 to 0.6 between paired outcomes. That is moderate: higher correlation favours paired designs, so this range does not flatter Diablo.
+- **The item correlation** ρ is drawn uniformly from 0.4 to 0.85, which gives a phi correlation of about 0.2 to 0.65 between paired outcomes. That is moderate: higher correlation favours paired designs, so this range does not flatter Diablo.
 - **Runs.** v1 and v2 once each (for the overall comparison), then, for each factor, a control run of v1 and a treatment run of v1 with only that factor changed. Every run draws fresh noise on the same items. Each experiment therefore has its own control, as in the app.
 - **Seeds.** Replicate r of a cell uses the mulberry32 seed `hashString("diablo-bench/v1/K{K}/d{drop}/n{n}/r{r}")` (the app's own FNV-1a `hashString` and `mulberry32`), so any single scenario can be regenerated on its own.
 
