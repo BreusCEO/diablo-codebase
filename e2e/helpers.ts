@@ -1,5 +1,8 @@
 import { expect, type Page } from "@playwright/test";
 
+/** Where the setup project saves the signed-in demo session. */
+export const DEMO_STATE = "e2e/.auth/demo.json";
+
 export const COMPOSER = "Describe what you want to find out about an AI system";
 
 export async function gotoHome(page: Page) {

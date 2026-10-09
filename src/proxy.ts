@@ -1,17 +1,52 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { authSecret } from "@/lib/auth/env";
+import { SESSION_COOKIE, verifySession } from "@/lib/auth/session";
 import { SEED_IDS } from "@/lib/data/seeds";
 import { CREATED_ID } from "@/lib/slug";
 
 /**
- * Real 404s for investigation URLs that cannot exist. The page itself streams
- * (its content lives in the browser), and once streaming starts the status is
- * already 200, so the check has to happen here, before rendering.
+ * Runs before every app route (see `matcher`):
  *
- * Seeded ids and ids with the shape the app creates pass; anything else is
- * rewritten to a path no route matches, which renders the branded not-found
- * page with status 404.
+ * 1. Authentication. The workspace needs a valid, signed session cookie;
+ *    without one the visitor goes to sign-in (`/`) with `?next=` set. A
+ *    signed-in visitor to `/` goes straight to the workspace. The (app)
+ *    layout verifies again through the data access layer.
+ * 2. Real 404s for investigation URLs that cannot exist. The page streams,
+ *    and once streaming starts the status is already 200, so the check has
+ *    to happen here. Seeded ids and ids with the shape the app creates pass;
+ *    anything else renders the branded not-found page with status 404.
  */
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value, authSecret());
+
+  if (pathname === "/") {
+    return session ? redirect(request, "/home") : NextResponse.next();
+  }
+
+  if (!session) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "unauthenticated" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+    }
+    const login = new URL("/", request.url);
+    login.searchParams.set("next", pathname + search);
+    const res = redirect(request, login);
+    // A stale or forged cookie is useless; drop it.
+    if (request.cookies.has(SESSION_COOKIE)) res.cookies.delete(SESSION_COOKIE);
+    return res;
+  }
+
+  if (pathname.startsWith("/investigations/")) return investigation(request);
+  return NextResponse.next();
+}
+
+function redirect(request: NextRequest, to: string | URL) {
+  const res = NextResponse.redirect(new URL(to, request.url));
+  res.headers.set("Cache-Control", "no-store");
+  return res;
+}
+
+function investigation(request: NextRequest) {
   const parts = request.nextUrl.pathname.split("/");
   let id = parts[2] ?? "";
   try {
@@ -25,5 +60,19 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/investigations/:path+"],
+  // Every route in the (app) group, the sign-in page, and app API routes
+  // (everything under /api except the auth endpoints themselves).
+  matcher: [
+    "/",
+    "/home/:path*",
+    "/investigations/:path*",
+    "/systems/:path*",
+    "/experiments/:path*",
+    "/evidence/:path*",
+    "/reports/:path*",
+    "/datasets/:path*",
+    "/settings/:path*",
+    "/design/:path*",
+    "/api/((?!auth/).*)",
+  ],
 };

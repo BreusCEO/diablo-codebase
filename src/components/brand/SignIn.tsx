@@ -1,30 +1,57 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from "motion/react";
 import { ArrowRight } from "lucide-react";
-import { auth } from "@/lib/auth";
+import { safeNext } from "@/lib/auth/next-path";
 import { BRAND } from "@/lib/brand";
 import { LiveMark, useReduce } from "./LiveMark";
 
+/** What a failed sign-in comes back with (`/?error=<code>`), in plain words. */
+const ERRORS: Record<string, string> = {
+  access_denied: "Google sign-in was cancelled. Try again, or enter the demo workspace.",
+  state_mismatch: "That sign-in attempt expired or was started in another tab. Please try again.",
+  exchange_failed: "Google couldn't confirm your sign-in. Please try again.",
+  unverified_email: "Your Google account's email address isn't verified yet.",
+  google_unavailable: "Google sign-in isn't set up on this server. Enter the demo workspace instead.",
+  server_error: "Something went wrong while signing you in. Please try again.",
+  demo_failed: "The demo workspace couldn't be opened. Please reload and try again.",
+};
+
+/** The query string, read after hydration (the page itself is static). */
+const subscribeNoop = () => () => {};
+function useQuery() {
+  const search = useSyncExternalStore(
+    subscribeNoop,
+    () => window.location.search,
+    () => "",
+  );
+  const params = new URLSearchParams(search);
+  const rawNext = params.get("next");
+  const error = params.get("error");
+  return {
+    next: safeNext(rawNext),
+    rawNext: rawNext ? safeNext(rawNext, "") : "",
+    error: error ? (ERRORS[error] ?? ERRORS.server_error) : null,
+  };
+}
+
 /**
  * The entrance (brand spec §19–23): burgundy, the cream mark revealing itself,
- * then one honest way in. The reveal is full on a first visit (the boot script
- * sets data-reveal) and short afterwards; a click or key skips it. Content is
- * server-rendered and timed with CSS, so it appears without JavaScript too.
+ * then the way in on a sheet of frosted glass. The reveal is full on a first
+ * visit (the boot script sets data-reveal) and short afterwards; a click or
+ * key skips it. Content is server-rendered and timed with CSS, so it appears
+ * without JavaScript too, and both ways in work without JavaScript.
  */
-export function SignIn() {
-  const router = useRouter();
+export function SignIn({ googleEnabled }: { googleEnabled: boolean }) {
   const reduce = useReduce();
+  const { next, rawNext, error } = useQuery();
   const [skipped, setSkipped] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [leaving, setLeaving] = useState<{ x: number; y: number } | null>(null);
   const button = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    router.prefetch("/home");
-  }, [router]);
 
   // Remember the reveal; a click or key press skips it.
   useEffect(() => {
@@ -57,16 +84,37 @@ export function SignIn() {
   const rotateY = useTransform(sx, [0, 1], [-8, 8]);
   const rotateX = useTransform(sy, [0, 1], [6, -6]);
 
-  const enter = async () => {
-    await auth.signIn();
+  // With JavaScript the demo form posts in the background, then the app grows
+  // out of the button; without it, the form posts and the server redirects.
+  const enterDemo = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (pending) return;
+    setPending(true);
+    setFailed(false);
+    try {
+      const res = await fetch("/api/auth/demo", {
+        method: "POST",
+        body: new URLSearchParams({ next }),
+        redirect: "manual",
+        credentials: "same-origin",
+      });
+      if (res.type !== "opaqueredirect" && !res.ok) throw new Error(String(res.status));
+    } catch {
+      setPending(false);
+      setFailed(true);
+      return;
+    }
     if (reduce) {
-      router.push("/home");
+      window.location.assign(next);
       return;
     }
     const r = button.current?.getBoundingClientRect();
     setLeaving(r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: innerHeight / 2 });
-    setTimeout(() => router.push("/home"), 560);
+    setTimeout(() => window.location.assign(next), 560);
   };
+
+  const message = failed ? ERRORS.demo_failed : error;
+  const googleHref = rawNext ? `/api/auth/google?next=${encodeURIComponent(rawNext)}` : "/api/auth/google";
 
   return (
     <main
@@ -79,6 +127,8 @@ export function SignIn() {
         py.set(e.clientY / window.innerHeight);
       }}
     >
+      {/* Dark theme: the burgundy sinks into the warm plum of the app. */}
+      <div aria-hidden className="entrance-plum pointer-events-none absolute inset-0" />
       {!reduce && <motion.div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: light }} />}
       {/* Without JavaScript the mark simply appears, finished. */}
       <noscript>
@@ -89,48 +139,82 @@ export function SignIn() {
 
       <div className="relative flex w-full max-w-[400px] flex-col items-center text-center">
         <motion.div style={reduce ? undefined : { rotateX, rotateY, transformStyle: "preserve-3d" }}>
-          <LiveMark key={skipped ? "skipped" : "intro"} size={112} intro={skipped ? "none" : "auto"} track blink title={BRAND.name} />
+          <LiveMark key={skipped ? "skipped" : "intro"} size={96} intro={skipped ? "none" : "auto"} track blink title={BRAND.name} />
         </motion.div>
 
         <p className="entrance-name mt-5 text-[12px] font-medium uppercase tracking-[0.22em] text-cream/80">{BRAND.name}</p>
 
-        <div className="entrance-auth flex w-full flex-col items-center">
-          <h1 className="mt-8 text-[30px] font-semibold leading-[38px] tracking-[-0.02em]">{BRAND.tagline}</h1>
-          <p className="mt-3 text-[15px] leading-6 text-cream/80">
-            Research, test, and understand
-            <br />
-            the AI systems you build.
-          </p>
+        <div className="entrance-auth glass mt-7 flex w-full flex-col items-center rounded-[16px] px-6 pb-6 pt-7 sm:px-8">
+          <h1 className="text-[26px] font-semibold leading-[34px] tracking-[-0.02em]">{BRAND.tagline}</h1>
+          <p className="mt-2 text-[15px] leading-6 text-cream/80">Sign in to research, test, and understand the AI systems you build.</p>
 
-          <motion.button
-            ref={button}
-            type="button"
-            onClick={enter}
-            whileTap={reduce ? undefined : { scale: 0.98 }}
-            className="group mt-9 flex h-11 w-full items-center justify-center gap-2 rounded-[8px] bg-cream text-[15px] font-medium text-burgundy shadow-[0_12px_32px_-12px_rgb(0_0_0/0.55)] transition-colors duration-150 hover:bg-white focus-visible:outline-cream"
-          >
-            Enter demo workspace
-            <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2} />
-          </motion.button>
-          <p className="mt-3 text-[13px] text-cream/80">Sign-in is not available in this demo.</p>
+          {message && (
+            <p role="alert" className="mt-5 w-full rounded-[8px] border border-cream/20 bg-[rgb(30_0_9/0.45)] px-3 py-2 text-left text-[13px] leading-5 text-cream">
+              {message}
+            </p>
+          )}
 
-          <p className="mt-10 max-w-[340px] text-[12px] leading-[18px] text-cream/80">
-            By continuing you agree to the{" "}
-            <Link href="/legal/terms" className="text-cream underline underline-offset-2 hover:text-white">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link href="/legal/privacy" className="text-cream underline underline-offset-2 hover:text-white">
-              Privacy Policy
-            </Link>
-            .
-          </p>
-          <p className="mt-2 text-[12px] text-cream/80">
-            <Link href="/legal/usage" className="underline underline-offset-2 hover:text-white">
-              Usage Policy
-            </Link>
-          </p>
+          {googleEnabled ? (
+            <a
+              href={googleHref}
+              className="mt-6 flex h-11 w-full items-center justify-center gap-3 rounded-[8px] bg-white text-[15px] font-medium text-[#1f1f1f] shadow-[0_12px_32px_-12px_rgb(0_0_0/0.55)] transition-[background-color,box-shadow] duration-150 hover:shadow-[0_14px_36px_-12px_rgb(0_0_0/0.65)] focus-visible:outline-cream"
+            >
+              <GoogleG />
+              Continue with Google
+            </a>
+          ) : (
+            <>
+              <button
+                type="button"
+                disabled
+                aria-describedby="google-unavailable"
+                className="mt-6 flex h-11 w-full cursor-not-allowed items-center justify-center gap-3 rounded-[8px] bg-white/70 text-[15px] font-medium text-[#1f1f1f]/70"
+              >
+                <GoogleG />
+                Continue with Google
+              </button>
+              <p id="google-unavailable" className="mt-2 text-[12px] text-cream/80">
+                Google sign-in is not configured on this server.
+              </p>
+            </>
+          )}
+
+          <div aria-hidden className="my-4 flex w-full items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-cream/80">
+            <span className="h-px flex-1 bg-cream/20" />
+            or
+            <span className="h-px flex-1 bg-cream/20" />
+          </div>
+
+          <form method="post" action="/api/auth/demo" onSubmit={enterDemo} className="w-full">
+            <input type="hidden" name="next" value={rawNext} />
+            <motion.button
+              ref={button}
+              type="submit"
+              aria-busy={pending || undefined}
+              whileTap={reduce ? undefined : { scale: 0.98 }}
+              className="group flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-cream/35 bg-cream/[0.06] text-[15px] font-medium text-cream transition-colors duration-150 hover:border-cream/60 hover:bg-cream/[0.12] focus-visible:outline-cream"
+            >
+              Enter demo workspace
+              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2} />
+            </motion.button>
+          </form>
+          <p className="mt-3 text-[12px] leading-[18px] text-cream/80">The demo uses sample data and keeps nothing after you leave.</p>
         </div>
+
+        <p className="entrance-auth mt-6 max-w-[340px] text-[12px] leading-[18px] text-cream/80">
+          By continuing you agree to the{" "}
+          <Link href="/legal/terms" className="text-cream underline underline-offset-2 hover:text-white">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/legal/privacy" className="text-cream underline underline-offset-2 hover:text-white">
+            Privacy Policy
+          </Link>
+          .{" "}
+          <Link href="/legal/usage" className="underline underline-offset-2 hover:text-white">
+            Usage Policy
+          </Link>
+        </p>
       </div>
 
       {/* Burgundy → warm off-white: the app grows out of the button you pressed. */}
@@ -146,5 +230,20 @@ export function SignIn() {
         )}
       </AnimatePresence>
     </main>
+  );
+}
+
+/**
+ * Google's standard multicolour "G". Google's sign-in branding rules ask for
+ * it unaltered, on white, with #1F1F1F label text, whatever the app's theme.
+ */
+function GoogleG() {
+  return (
+    <svg aria-hidden width="18" height="18" viewBox="0 0 48 48" className="shrink-0">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
   );
 }

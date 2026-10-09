@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { MoreHorizontal, PanelLeft, Pencil, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
 import { LayoutGroup, motion } from "motion/react";
 import { LiveMark } from "@/components/brand/LiveMark";
@@ -19,7 +19,7 @@ import type { Investigation } from "@/lib/data/types";
 import { recencyGroup, type RecencyGroup } from "@/lib/format";
 import { setSidebarCollapsed, useSidebarCollapsed } from "@/lib/prefs";
 import { ui } from "@/lib/ui";
-import { AccountMenu } from "./AccountMenu";
+import { AccountMenu, AccountMenuSkeleton } from "./AccountMenu";
 import { DeleteDialog, RenameDialog } from "./InvestigationDialogs";
 import { INVESTIGATIONS, isActive, PRIMARY, SECONDARY, type NavItem } from "./nav";
 
@@ -124,7 +124,9 @@ export function SidebarContent({ variant, onNavigate }: { variant: "desktop" | "
       </nav>
 
       <div className="shrink-0 border-t border-line p-2">
-        <AccountMenu collapsed={collapsed} onNavigate={onNavigate} />
+        <Suspense fallback={<AccountMenuSkeleton collapsed={collapsed} />}>
+          <AccountMenu collapsed={collapsed} onNavigate={onNavigate} />
+        </Suspense>
       </div>
     </div>
   );
