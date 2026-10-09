@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-export const ORIGIN = "https://diabloai.pnoia.dev";
+export const ORIGIN = "https://diablo.pnoia.dev";
 
 export const ROUTES = ["/", "/about", "/team", "/pricing"] as const;
 

@@ -2,7 +2,7 @@
 
 **Diablo AI lets companies understand what is actually happening inside their AI systems: not just *that* a score moved, but *which change* moved it, and how sure they can be.**
 
-- Live demo: https://diablo.pnoia.dev (click "Enter demo workspace"; no account needed)
+- Live demo: https://app.diablo.pnoia.dev (click "Enter demo workspace"; no account needed)
 - Code: https://github.com/wcissor/diablo
 - Every statistic below is reproduced by `npm test` (`src/lib/submission-claims.test.ts`); cost figures are labelled estimates.
 

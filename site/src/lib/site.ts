@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 
 /** The product itself. Every "Try yourself" goes here. */
-export const APP_URL = "https://diablo.pnoia.dev";
+export const APP_URL = "https://app.diablo.pnoia.dev";
 
 /** Where this site lives. Canonical URLs, the sitemap and shared images are built on it. */
-export const SITE_URL = "https://diabloai.pnoia.dev";
+export const SITE_URL = "https://diablo.pnoia.dev";
 
 export const SITE = {
   name: "Diablo",

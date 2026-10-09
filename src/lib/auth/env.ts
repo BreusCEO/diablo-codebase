@@ -8,7 +8,7 @@ import "server-only";
  *   GOOGLE_CLIENT_ID      Google OAuth web client (optional)
  *   GOOGLE_CLIENT_SECRET
  *   APP_ORIGIN            public origin for the OAuth redirect URI,
- *                         e.g. https://diablo.pnoia.dev (defaults to the request's)
+ *                         e.g. https://app.diablo.pnoia.dev (defaults to the request's)
  */
 
 const MIN_SECRET_LENGTH = 32;
