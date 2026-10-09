@@ -8,7 +8,7 @@
 
 ## Summary
 
-**Problem.** Teams that ship AI change prompts, models, tools and retrieval every week. When quality drops, an eval dashboard says *that* a score moved, not which change caused it or whether the drop is real. **Who has it.** Every company that integrates AI: a telecom such as Azercell running a support assistant, a startup shipping an agent, a frontier lab such as Anthropic or OpenAI comparing model versions. (Target segments only; none is a customer or partner.) **What Diablo does.** It turns a question ("why did it get worse?") into competing hypotheses and controlled experiments. Each hypothesis gets a verdict with an effect size, a 95% confidence interval, an exact test and a validity grade, traceable to raw outputs. The rule: **the AI reasons, the system measures**; the model can never write a number. **Proof.** The live prototype runs the full loop on demo data. Its statistics engine is real and checked against SciPy reference values: 122 unit tests and 40 end-to-end tests pass. A seeded planted-cause benchmark (45,000 simulated updates; it measures the protocol, not an LLM) shows that when Diablo names a cause it is the right one 97.3% of the time, against 71.7% for blaming the largest observed drop. **Next.** Put a real reasoning model (GLM-5.3) and a real target-system connector behind the existing provider interface, then run the first investigation on a live system.
+**Problem.** Teams that ship AI change prompts, models, tools and retrieval every week. When quality drops, an eval dashboard says *that* a score moved, not which change caused it or whether the drop is real. **Who has it.** Every company that integrates AI: a telecom such as Azercell running a support assistant, a startup shipping an agent, a frontier lab such as Anthropic or OpenAI comparing model versions. (Target segments only; none is a customer or partner.) **What Diablo does.** It turns a question ("why did it get worse?") into competing hypotheses and controlled experiments. Each hypothesis gets a verdict with an effect size, a 95% confidence interval, an exact test and a validity grade, traceable to raw outputs. The rule: **the AI reasons, the system measures**; the model can never write a number. **Proof.** The live prototype runs the full loop on demo data. Its statistics engine is real and checked against SciPy reference values: 251 unit tests and 48 end-to-end tests pass. A seeded planted-cause benchmark (45,000 simulated updates; it measures the protocol, not an LLM) shows that when Diablo names a cause it is the right one 97.3% of the time, against 71.7% for blaming the largest observed drop. **Next.** The model-backed engine at `/live` is built and tested with a scripted model and mocked APIs; it switches on with a Gemini or GLM key and has not yet been run against a real model API. Next: run it on a real model, then connect a customer's own AI system and pilot it on one real regression.
 
 ## 1. Value for the user
 
@@ -31,13 +31,13 @@ The CI is a paired bootstrap: 2,000 resamples, seed 1. Discordant pairs: E1 b = 
 
 | Works today (live, tested) | Next (not built yet) |
 |---|---|
-| Investigation workspace (Overview, Graph, Evidence, Report, Session) and an experiment panel (design, config diff, effect, test, reproducibility) | Real reasoning model in the loop (GLM-5.3 planned) |
+| Investigation workspace (Overview, Graph, Evidence, Report, Session) and an experiment panel (design, config diff, effect, test, reproducibility) | Live engine run against a real model API (built and tested offline; needs a key) |
 | Statistics engine: Wilson, Newcombe, two-proportion z, Fisher exact, exact McNemar, seeded paired bootstrap, Cohen's h, Holm | Connector that runs a customer's AI system (API endpoint plus config) |
 | Validity rubric C1–C9 and an evidence-strength grade; "Not recorded" is never a pass | Persistent knowledge across investigations |
 | Verdicts and statuses derived from counts, never typed in | Sample-size planning before a run |
 | Rule-based demo agent (7 topics) and a seeded run simulator | Autonomous monitoring ("something changed; investigate") |
 | Report export (print/PDF, JSON), chart export (CSV, SVG) | |
-| **In progress, not merged:** Python engine whose Gemini provider turns a question into an experiment plan (`feat/gemini-provider`); Google sign-in (`feat/auth`) | |
+| **Also in the repo:** model-backed live engine at `/live` (Gemini or Z.ai GLM; disabled without a key, never faked); Python engine with a Gemini provider (`engine/`); Google sign-in with protected routes | |
 
 **What the AI contributes.** The reasoning model does an experienced evaluator's work:
 
