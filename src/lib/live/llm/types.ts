@@ -4,7 +4,7 @@
  * fake without knowing which.
  */
 
-export type LLMProvider = "gemini" | "zai" | "fake";
+export type LLMProvider = "anthropic" | "gemini" | "zai" | "fake";
 
 export interface LLMMessage {
   role: "user" | "assistant";
@@ -14,7 +14,11 @@ export interface LLMMessage {
 export interface LLMRequest {
   system: string;
   messages: LLMMessage[];
-  /** Ask the provider for a JSON object (Gemini: application/json; Z.ai: json_object). */
+  /**
+   * Ask the provider for a JSON object (Gemini: application/json; Z.ai: json_object).
+   * The Claude API has no schema-free JSON mode: there the prompt asks for JSON and
+   * the caller's validate-and-repair loop does the rest.
+   */
   json?: boolean;
   temperature?: number;
   maxTokens?: number;
@@ -70,11 +74,13 @@ export class LLMError extends Error {
   readonly status: number | null;
   /** How long the provider asked us to wait, when it said. */
   readonly retryAfterMs: number | null;
+  /** Tokens the provider billed for a call that still failed (for example a reply cut off at max_tokens). */
+  readonly usage: LLMUsage | null;
 
   constructor(
     kind: LLMErrorKind,
     message: string,
-    opts: { provider: LLMProvider; status?: number | null; retryAfterMs?: number | null },
+    opts: { provider: LLMProvider; status?: number | null; retryAfterMs?: number | null; usage?: LLMUsage | null },
   ) {
     super(message);
     this.name = "LLMError";
@@ -82,6 +88,7 @@ export class LLMError extends Error {
     this.provider = opts.provider;
     this.status = opts.status ?? null;
     this.retryAfterMs = opts.retryAfterMs ?? null;
+    this.usage = opts.usage ?? null;
   }
 }
 
@@ -93,10 +100,10 @@ export const isFatal = (e: unknown): e is LLMError =>
   e instanceof LLMError && (e.kind === "auth" || e.kind === "model-not-found" || e.kind === "quota" || e.kind === "bad-request");
 
 export const ERROR_HINT: Record<LLMErrorKind, string> = {
-  auth: "The model key was rejected. Check GEMINI_API_KEY (or ZAI_API_KEY) in the environment.",
+  auth: "The model key was rejected or lacks permission. Check ANTHROPIC_API_KEY (or GEMINI_API_KEY, ZAI_API_KEY) in the environment.",
   "model-not-found": "The configured model id does not exist for this key. Check DIABLO_REASONING_MODEL and DIABLO_TARGET_MODEL.",
   "rate-limit": "The provider is rate-limiting this key. Wait a minute and try again.",
-  quota: "The key's quota is used up (for example the free tier's daily limit). Try again tomorrow or use another key.",
+  quota: "The key's quota, spend limit or credit is used up (for example a monthly spend cap or a free tier's daily limit). Raise the limit, wait for it to reset or use another key.",
   server: "The provider had a server error. Try again shortly.",
   "bad-request": "The provider refused the request as malformed.",
   network: "The provider could not be reached.",

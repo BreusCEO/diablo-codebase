@@ -1,8 +1,18 @@
 import "server-only";
-import { providerKey, type LiveConfig } from "../env";
+import { anthropicWorkspace, providerKey, type LiveConfig } from "../env";
+import type { ProviderId } from "../types";
+import { anthropicLLM } from "./anthropic";
 import { geminiLLM } from "./gemini";
 import type { LLM } from "./types";
 import { zaiLLM } from "./zai";
+
+type Make = (opts: { apiKey: string; model: string; timeoutMs: number }) => LLM;
+
+const ADAPTERS: Record<ProviderId, Make> = {
+  anthropic: (opts) => anthropicLLM({ ...opts, workspaceId: anthropicWorkspace() }),
+  gemini: geminiLLM,
+  zai: zaiLLM,
+};
 
 /**
  * The reasoning model (plans, interprets) and the target model (plays the
@@ -13,7 +23,7 @@ export function createModels(config: LiveConfig): { reasoning: LLM; target: LLM 
   if (!config.provider) return null;
   const apiKey = providerKey(config.provider);
   if (!apiKey) return null;
-  const make = config.provider === "gemini" ? geminiLLM : zaiLLM;
+  const make = ADAPTERS[config.provider];
   return {
     reasoning: make({ apiKey, model: config.reasoningModel, timeoutMs: config.caps.reasoningTimeoutMs }),
     target: make({ apiKey, model: config.targetModel, timeoutMs: config.caps.targetTimeoutMs }),

@@ -193,6 +193,10 @@ export async function runPaired({ target, plan, items, caps, signal, now = Date.
     } catch (e) {
       const kind: LLMErrorKind = e instanceof LLMError ? e.kind : "bad-response";
       const message = e instanceof Error ? e.message : "Unknown error";
+      // A call can fail after the provider billed it (a reply cut off at max_tokens): those tokens count.
+      const billed = e instanceof LLMError && e.usage ? e.usage : zero;
+      usage.inputTokens += billed.inputTokens;
+      usage.outputTokens += billed.outputTokens;
       const cancelled = kind === "aborted" || callSignal.aborted;
       if (kind === "rate-limit" && !cancelled && (t.requeues ?? 0) < MAX_REQUEUES) {
         const ms = Math.min(MAX_PAUSE_MS, (e as LLMError).retryAfterMs ?? DEFAULT_PAUSE_MS);
@@ -200,7 +204,7 @@ export async function runPaired({ target, plan, items, caps, signal, now = Date.
         tasks.push({ ...t, requeues: (t.requeues ?? 0) + 1 });
         return;
       }
-      record({ ...base, status: cancelled ? "cancelled" : "failed", response: "", error: message, errorKind: kind, usage: zero, durationMs: now() - t0 });
+      record({ ...base, status: cancelled ? "cancelled" : "failed", response: "", error: message, errorKind: kind, usage: billed, durationMs: now() - t0 });
       if (isFatal(e)) {
         fatal ??= e;
         stop.abort(e);

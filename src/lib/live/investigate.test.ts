@@ -145,6 +145,16 @@ describe("live investigation, end to end with fakes", () => {
     expect(result.conclusion.rejections[0][0]).toMatch(/model call failed/);
   });
 
+  it("meters the tokens of a reasoning call that failed after it was billed", async () => {
+    const cut = new LLMError("bad-response", "The reply hit the output limit (max_tokens 4096) before it finished.", {
+      provider: "anthropic",
+      usage: { inputTokens: 1500, outputTokens: 4096 },
+    });
+    const { result } = await run(reasoner([() => cut]));
+    expect(result.conclusion.source).toBe("template");
+    expect(result.usage.byStage.interpret).toEqual({ calls: 1, inputTokens: 1500, outputTokens: 4096 });
+  });
+
   it("fails clearly, with no run, when no valid plan arrives", async () => {
     const reasoning = new FakeLLM("fake-reasoner", () => '{"hypotheses": []}');
     const target = fakeTarget(answers, accuracy);

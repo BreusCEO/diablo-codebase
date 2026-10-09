@@ -1,6 +1,7 @@
 import "server-only";
 import { CAP_LIMITS, maxCalls, MIN_ITEMS_PER_ARM, type LiveCaps } from "./budget";
-import { DEFAULT_MODELS, KEY_VAR, PROVIDER_LABEL } from "./providers";
+import { claudeRejectsTemperature, DEFAULT_MODELS, isProviderId, KEY_VAR, PROVIDER_LABEL, PROVIDER_ORDER } from "./providers";
+import { FACTORS } from "./registry";
 import type { AbuseLimits, LivePublicConfig, ProviderId } from "./types";
 
 /**
@@ -8,11 +9,13 @@ import type { AbuseLimits, LivePublicConfig, ProviderId } from "./types";
  * so `next build` needs no keys, and keys never leave this module except into
  * an adapter's request header.
  *
+ *   ANTHROPIC_API_KEY         Claude API key (Claude Console → Settings → API keys)
+ *   ANTHROPIC_WORKSPACE_ID    only for a key not scoped to one workspace: sent as anthropic-workspace-id
  *   GEMINI_API_KEY            Google AI Studio key (free tier, no card)
  *   ZAI_API_KEY               Z.ai key (GLM)
- *   DIABLO_LLM                gemini | zai; else whichever key exists (Gemini first)
- *   DIABLO_REASONING_MODEL    plans and interprets (default per provider below)
- *   DIABLO_TARGET_MODEL       the "Helper" system under test (default per provider below)
+ *   DIABLO_LLM                anthropic | gemini | zai; else whichever key exists (Claude, then Gemini, then Z.ai)
+ *   DIABLO_REASONING_MODEL    plans and interprets (default per provider in providers.ts)
+ *   DIABLO_TARGET_MODEL       the "Helper" system under test (default per provider in providers.ts)
  *   LIVE_MAX_EXPERIMENTS, LIVE_MAX_ITEMS_PER_ARM, LIVE_CONCURRENCY,
  *   LIVE_TARGET_TIMEOUT_SECONDS, LIVE_REASONING_TIMEOUT_SECONDS,
  *   LIVE_RUN_DEADLINE_SECONDS  budget overrides, clamped to hard ceilings
@@ -73,13 +76,27 @@ function pickProvider(env: Env): { provider: ProviderId | null; problem: string 
   const has = (p: ProviderId) => !!env[KEY_VAR[p]]?.trim();
   const wanted = env.DIABLO_LLM?.trim().toLowerCase();
   if (wanted) {
-    if (wanted !== "gemini" && wanted !== "zai") return { provider: null, problem: `DIABLO_LLM must be "gemini" or "zai" (it is "${wanted.slice(0, 20)}").` };
+    if (!isProviderId(wanted)) {
+      return { provider: null, problem: `DIABLO_LLM must be ${PROVIDER_ORDER.map((p) => `"${p}"`).join(", ")} (it is "${wanted.slice(0, 20)}").` };
+    }
     return has(wanted) ? { provider: wanted, problem: null } : { provider: null, problem: `DIABLO_LLM is "${wanted}" but ${KEY_VAR[wanted]} is not set.` };
   }
-  if (has("gemini")) return { provider: "gemini", problem: null };
-  if (has("zai")) return { provider: "zai", problem: null };
+  const first = PROVIDER_ORDER.find(has);
   // Simply no key: not a misconfiguration, so no problem to report beyond "not configured".
-  return { provider: null, problem: null };
+  return { provider: first ?? null, problem: null };
+}
+
+const WORKSPACE_ID = /^wrkspc_[A-Za-z0-9]{1,64}$/;
+
+/** The live scenario varies the target's temperature; a Claude model that rejects any value but 1 cannot run it. */
+function targetProblem(provider: ProviderId | null, target: string): string | null {
+  if (provider !== "anthropic" || !claudeRejectsTemperature(target)) return null;
+  const varied = FACTORS.temperature.values.filter((v) => Number(v) !== 1);
+  if (varied.length === 0) return null;
+  return (
+    `${target} accepts no temperature other than 1, and the live scenario runs the target at temperature ${varied.join(" and ")} too. ` +
+    `Set DIABLO_TARGET_MODEL to a Claude model that takes a temperature, such as ${DEFAULT_MODELS.anthropic.target} (the default).`
+  );
 }
 
 function model(env: Env, name: string, fallback: string): string | { invalid: string } {
@@ -92,18 +109,31 @@ export function liveConfig(env: Env = process.env): LiveConfig {
   const caps = readCaps(env);
   const limits = readLimits(env);
   const { provider, problem } = pickProvider(env);
-  const defaults = DEFAULT_MODELS[provider ?? "gemini"];
+  const defaults = DEFAULT_MODELS[provider ?? PROVIDER_ORDER[0]];
   const reasoning = model(env, "DIABLO_REASONING_MODEL", defaults.reasoning);
   const target = model(env, "DIABLO_TARGET_MODEL", defaults.target);
   const bad = [reasoning, target].find((m): m is { invalid: string } => typeof m !== "string");
+  const workspace = env.ANTHROPIC_WORKSPACE_ID?.trim();
+  const reasoningModel = typeof reasoning === "string" ? reasoning : defaults.reasoning;
+  const targetModel = typeof target === "string" ? target : defaults.target;
+  const found =
+    (bad ? `${bad.invalid} is not a valid model id.` : null) ??
+    (provider === "anthropic" && workspace && !WORKSPACE_ID.test(workspace) ? "ANTHROPIC_WORKSPACE_ID is not a workspace id (they look like wrkspc_…)." : null) ??
+    targetProblem(provider, targetModel);
   return {
-    provider: bad ? null : provider,
-    problem: bad ? `${bad.invalid} is not a valid model id.` : problem,
-    reasoningModel: typeof reasoning === "string" ? reasoning : defaults.reasoning,
-    targetModel: typeof target === "string" ? target : defaults.target,
+    provider: found ? null : provider,
+    problem: found ?? problem,
+    reasoningModel,
+    targetModel,
     caps,
     limits,
   };
+}
+
+/** The workspace header value for a Claude key that is not scoped to one workspace; null when not set. */
+export function anthropicWorkspace(env: Env = process.env): string | null {
+  const v = env.ANTHROPIC_WORKSPACE_ID?.trim();
+  return v && WORKSPACE_ID.test(v) ? v : null;
 }
 
 /** The key for a provider. Only the adapter factory calls this. */
