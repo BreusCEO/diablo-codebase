@@ -1,22 +1,82 @@
-# Diablo AI
+<p align="center">
+  <img src="public/icon.svg" width="88" alt="Diablo AI" />
+</p>
 
-**Diablo AI lets companies understand what is actually happening inside their AI systems: not just *that* a score moved, but *which change* moved it, and how sure they can be.**
+<h1 align="center">Diablo AI</h1>
 
-Live demo: **https://app.diablo.pnoia.dev** (click "Enter demo workspace"; no account needed) · Submission: [`docs/SUBMISSION.md`](docs/SUBMISSION.md) · Stage pitch: [`docs/PITCH.md`](docs/PITCH.md) · Self-assessment: [`docs/SCORECARD.md`](docs/SCORECARD.md) · Benchmark: [`docs/BENCHMARK.md`](docs/BENCHMARK.md) · Disclosure: [`docs/DISCLOSURE.md`](docs/DISCLOSURE.md) · Video (72 s): https://diablo.pnoia.dev/demo.mp4
+<p align="center"><b>AI that evolves AI.</b><br/>The research engine that tells you <i>why</i> your AI got better or worse, and proves it.</p>
 
-A question such as "why did it get worse?" becomes competing hypotheses, controlled experiments, evidence and a verdict, with an effect size, a 95% confidence interval, an exact test and a validity grade, traceable to raw outputs. **The AI reasons. The system measures.** The reasoning agent proposes (a rule-based stand-in in the demo workspace; a real model on the [Live investigation](#live-investigations) page once a key is set); every number is computed from stored counts by `src/lib/stats.ts`.
+<p align="center">
+  <a href="https://app.diablo.pnoia.dev"><b>Live product</b></a> ·
+  <a href="https://diablo.pnoia.dev">Website</a> ·
+  <a href="https://diablo.pnoia.dev/demo.mp4">72-second demo</a> ·
+  <a href="docs/runs/2026-10-09-production-run.md">A real run, recorded</a> ·
+  <a href="docs/BENCHMARK.md">Benchmark</a>
+</p>
 
-Proof you can rerun (`npm test`, pinned in `src/lib/submission-claims.test.ts`), on an illustrative example rather than customer data: of two changes shipped together, a new system prompt cost **−15.0 pp** (95% CI −26.3 to −3.8, exact McNemar p = 0.012), while a temperature change showed no clear effect (−1.3 pp, CI −8.8 to +6.3). Revert the prompt and keep the temperature change.
+---
+
+## Every company now ships AI. Nobody can explain it.
+
+Prompts, models, tools and retrieval change every week. When quality drops, today's tools say **that** a number moved. They cannot say **which change** moved it, or whether the drop is even real. So teams guess, roll back everything, or ship the regression. Each wrong guess costs engineering weeks and customer trust.
+
+**Diablo answers the question nobody else can: "which change caused this, and how sure are we?"**
+
+## How it works
+
+Ask a question in plain language. Diablo turns it into **competing hypotheses**, designs **one controlled experiment per hypothesis**, runs your AI on the same items in both arms, and returns a **verdict per cause**: effect size, 95% confidence interval, exact test, multiple-comparison correction and an evidence grade, each traceable to the raw outputs.
+
+> **The AI reasons. The system measures.**
+> The model (Claude Opus 5.5) plans the investigation and explains the result. Code runs the experiments and computes every number. A grounding checker rejects any number the model tries to write itself. Diablo cannot hallucinate a result.
+
+## Proof, not promises
+
+**It works on a real model, live in production.** On 9 Oct 2026, Claude Opus 5.5 planned an investigation into a system with two changes shipped at once. Claude Haiku 4.5 was the system under test, and code ran 120 paired calls. Diablo found the planted cause: the prompt change took accuracy from **40/40 to 0/40** (exact McNemar p < 0.001). It cleared the innocent temperature change (40/40 to 39/40, no clear effect). On the first draft, the checker caught the model writing a number by hand and forced a rewrite. [Full event log →](docs/runs/2026-10-09-production-run.md)
+
+**It doesn't cry wolf.** Across a seeded benchmark of **45,000** simulated regressions with a known planted cause, Diablo's protocol:
+- named the right cause **97.3%** of the time when it named one;
+- raised a false alarm on only **1.1%** of no-cause scenarios, against **81%** for the common "blame the biggest drop" approach.
+
+[Method and every number →](docs/BENCHMARK.md)
+
+**It's engineered like infrastructure.** The statistics engine matches SciPy and statsmodels to within 5×10⁻⁵. There are 294 unit tests, plus an end-to-end browser suite with accessibility checks. Google sign-in has signature-verified tokens, and there is no hallucination path to a published number.
+
+## The economics
+
+| | |
+|---|---|
+| Model cost of that real investigation (123 calls) | **≈ $0.20** |
+| Planned price (free during early access) | Pro **$49**/month · Team **$199**/workspace/month · Enterprise custom |
+| What it replaces | Days of an ML engineer's time per regression, and the cost of shipping the wrong fix |
+
+No training data, no fine-tuning, no data warehouse. Diablo needs API access to the system under test and a set of prompts. Statistics run locally, at zero marginal cost.
+
+## Why now
+
+- **AI is moving from demos to operations.** The hard problem is no longer building a model but knowing what a change did to it.
+- **Models update monthly, and agents add tools weekly.** Every update is an uncontrolled experiment unless something measures it.
+- **Buyers and regulators are starting to ask for evidence, not anecdotes.** Diablo produces it by construction.
+
+## Where it goes: AI that evolves AI
+
+1. **Now: investigations on demand.** Ask why something changed and get a verdict with proof. *(Live.)*
+2. **Next: connect any AI system.** Point Diablo at your own model, agent or app endpoint, so findings persist into a knowledge base of causes, failure modes and fixes that compounds with every investigation.
+3. **Then: autonomous discovery.** Diablo notices that behaviour changed, investigates on its own, and verifies a fix before anyone files a ticket.
+4. **Ultimately: a self-improving investigator.** Every verified investigation becomes training data, so Diablo learns to investigate better. Any new version is promoted only if it beats the current one on a held-out benchmark. Every change stays explicit, testable and reversible.
+
+**Who it's for:** every company that ships AI. That includes telecoms running support assistants, startups shipping agents, and labs comparing model versions. *(Target segments, not current customers.)*
+
+## Team
+
+**Ilham Orujov** and **wcissor**, founding team. Built for the OMNI AI Summit hackathon.
+
+## Honest status
 
 | Works today | Next |
-| --- | --- |
-| Full investigation loop in the browser on demo data; real statistics engine (Wilson, Newcombe, z, Fisher, exact McNemar, paired bootstrap, Holm); validity rubric C1–C9; a live investigation (`/live`) where a real model plans and explains while code runs the target and computes every number, as soon as `ANTHROPIC_API_KEY` (Claude; or a Gemini or Z.ai key) is set; Google sign-in; 287 unit tests and 48 Playwright tests (sign-in setup included) pass | A connector to a customer's AI system behind the existing `DataProvider` interface; live runs stored server-side instead of in the browser tab |
+|---|---|
+| Live investigations on a real model (Claude Opus 5.5; Gemini as a system-wide alternative in `/admin`) against a built-in testbed; the full workspace (overview, research graph, evidence, report); the real statistics engine and validity rubric; Google sign-in plus a no-account demo workspace (its data is simulated and labelled "Demo data") | Connectors to customers' own AI systems; server-side storage of runs and knowledge; the improve-then-verify loop; more experiment types. See [Not yet implemented](#not-yet-implemented). |
 
-For every company that integrates AI, from telecoms to startups to frontier labs. These are target segments, not customers.
-
-### About this repository
-
-This repository is the clickable demo. Outside the Live investigation page, all data is illustrative and lives in your browser; those runs are simulated by a seeded mock provider. On `/live`, with a model key configured, the runs are real calls to a real model (see [Live investigations](#live-investigations)). Either way, every number on screen is derived from stored counts.
+Submission material: [`docs/SUBMISSION.md`](docs/SUBMISSION.md) · [`docs/PITCH.md`](docs/PITCH.md) · [`docs/DISCLOSURE.md`](docs/DISCLOSURE.md) · [`docs/DECISIONS.md`](docs/DECISIONS.md)
 
 ## Run it
 
