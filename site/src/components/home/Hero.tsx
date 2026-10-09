@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useSpring, useTransform, useVelocity } from "motion/react";
 import { LiveMark } from "@/components/LiveMark";
 import { TryButton } from "@/components/TryButton";
-import { FLICK, INSTANT, UI, soft, usePan } from "@/lib/motion";
+import { FLICK, INSTANT, UI, reducedMotionNow, soft, usePan } from "@/lib/motion";
 
 const QUESTIONS = [
   "Why did it get worse?",
@@ -115,43 +115,63 @@ function FlingTile() {
   );
 }
 
-/** The questions people bring to Diablo, typed out. Tap to skip to the next one. */
+/**
+ * The questions people bring to Diablo, typed out. Tap to skip to the next one.
+ * The first question is in the server HTML whole, so the box is never empty;
+ * typing starts with the next one. It goes round once and stops, and holds
+ * still while the pointer or focus is on it.
+ */
 function QuestionBox() {
-  const reduce = useReducedMotion();
   const [qi, setQi] = useState(0);
-  const [n, setN] = useState(0);
+  const [n, setN] = useState(QUESTIONS[0].length);
+  const [shown, setShown] = useState(1);
+  const [held, setHeld] = useState(false);
   const q = QUESTIONS[qi];
+  const done = shown > QUESTIONS.length;
+  const typing = n < q.length;
+
+  /** The next question: typed out, or whole when motion is reduced or the round is over. */
+  const next = (reduce: boolean) => {
+    const i = (qi + 1) % QUESTIONS.length;
+    const whole = reduce || done || shown === QUESTIONS.length;
+    setQi(i);
+    setN(whole ? QUESTIONS[i].length : 0);
+    setShown((s) => s + 1);
+  };
 
   useEffect(() => {
-    if (reduce) {
-      const t = setTimeout(() => setQi((i) => (i + 1) % QUESTIONS.length), 3600);
-      return () => clearTimeout(t);
-    }
-    let t: ReturnType<typeof setTimeout>;
-    if (n < q.length) t = setTimeout(() => setN(n + 1), 38 + ((n * 37) % 40));
-    else
-      t = setTimeout(() => {
-        setQi((i) => (i + 1) % QUESTIONS.length);
-        setN(0);
-      }, 2200);
+    if (held || done) return;
+    const reduce = reducedMotionNow();
+    const t = typing && !reduce ? setTimeout(() => setN(n + 1), 38 + ((n * 37) % 40)) : setTimeout(() => next(reduce), reduce ? 3600 : 2200);
     return () => clearTimeout(t);
-  }, [n, q, reduce]);
+    // `next` only reads state that is already a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [n, qi, held, done, typing]);
 
   return (
     <button
       type="button"
-      onClick={() => {
-        setQi((i) => (i + 1) % QUESTIONS.length);
-        setN(0);
-      }}
+      onClick={() => next(reducedMotionNow())}
+      onPointerEnter={() => setHeld(true)}
+      onPointerLeave={() => setHeld(false)}
+      onFocus={() => setHeld(true)}
+      onBlur={() => setHeld(false)}
       className="press block w-full rounded-[1.25rem] border bg-surface p-1.5 text-left shadow-2"
       aria-label={`Example question: ${q} Show the next one.`}
     >
       <span className="flex items-center gap-3 rounded-[0.9rem] bg-subtle px-4 py-3.5">
         <span className="t-overline shrink-0 rounded-md bg-accent px-1.5 py-0.5 text-[0.625rem] text-accent-ink">Ask</span>
-        <span className="t-body min-h-[1.55em] flex-1 font-medium" aria-hidden>
-          {reduce ? q : q.slice(0, n)}
-          {!reduce && <span className="caret" />}
+        {/* Every question sits in the same cell, invisibly, so the box is as tall as the longest one and never moves the page. */}
+        <span className="t-body grid flex-1 font-medium" aria-hidden>
+          {QUESTIONS.map((x) => (
+            <span key={x} className="invisible col-start-1 row-start-1">
+              {x}
+            </span>
+          ))}
+          <span className="col-start-1 row-start-1">
+            {q.slice(0, n)}
+            {!done && <span className="caret" />}
+          </span>
         </span>
       </span>
       <span className="t-caption flex items-center gap-2 px-3 pb-1.5 pt-2.5 text-ink-3" aria-hidden>

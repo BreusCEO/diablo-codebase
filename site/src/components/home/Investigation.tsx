@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { animate, motion, useInView, useMotionValue, useMotionValueEvent, useReducedMotion, useTransform, type MotionValue } from "motion/react";
 import { SectionHead } from "@/components/Reveal";
-import { INSTANT, MOVE, SHEET, clamp, project, soft, tick, usePan } from "@/lib/motion";
+import { INSTANT, MOVE, SHEET, clamp, onScreen, project, reducedMotionNow, soft, tick, usePan } from "@/lib/motion";
 
 const STAGES = ["Question", "Hypotheses", "Experiments", "Evidence", "Conclusion"];
 const LAST = STAGES.length - 1;
@@ -19,12 +19,18 @@ const useStage = (p: MotionValue<number>, s: number) => useTransform(p, [s - 0.6
 
 export function Investigation() {
   const reduce = useReducedMotion();
-  const p = useMotionValue(0);
+  // The server HTML shows the finished investigation, so it reads fully without
+  // JavaScript and under reduced motion. Below the fold it is rewound on load
+  // and plays once it is seen.
+  const p = useMotionValue(LAST);
   const rail = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const seen = useInView(box, { once: true, margin: "0px 0px -30% 0px" });
-  const [stage, setStage] = useState(0);
+  const [stage, setStage] = useState(LAST);
   const [playing, setPlaying] = useState(false);
+  const armed = useRef(false);
+  /** Where the knob is headed, so quick key presses add up even mid-animation. */
+  const aim = useRef(LAST);
   const run = useRef(0);
   const start = useRef(0);
 
@@ -47,6 +53,7 @@ export function Investigation() {
       from = 0;
     }
     for (let s = Math.floor(from) + 1; s <= LAST; s++) {
+      aim.current = s;
       await animate(p, s, s === 3 ? { duration: 1.6, ease: [0.4, 0, 0.2, 1] } : MOVE);
       if (run.current !== id) return;
       await new Promise((r) => setTimeout(r, 900));
@@ -60,8 +67,15 @@ export function Investigation() {
     setPlaying(false);
   }
 
+  useLayoutEffect(() => {
+    if (reducedMotionNow() || !box.current || onScreen(box.current)) return;
+    armed.current = true;
+    p.set(0);
+  }, [p]);
+
   useEffect(() => {
-    if (!seen) return;
+    if (!seen || !armed.current) return;
+    armed.current = false;
     const t = setTimeout(() => play(0), 300);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -69,6 +83,7 @@ export function Investigation() {
 
   const goTo = (s: number) => {
     stop();
+    aim.current = s;
     animate(p, s, reduce ? INSTANT : MOVE);
   };
 
@@ -141,8 +156,18 @@ export function Investigation() {
                 aria-valuenow={stage + 1}
                 aria-valuetext={STAGES[stage]}
                 onKeyDown={(e) => {
-                  if (e.key === "ArrowRight") goTo(Math.min(LAST, stage + 1));
-                  if (e.key === "ArrowLeft") goTo(Math.max(0, stage - 1));
+                  const from = p.isAnimating() ? aim.current : stage;
+                  const to = {
+                    ArrowRight: from + 1,
+                    ArrowUp: from + 1,
+                    ArrowLeft: from - 1,
+                    ArrowDown: from - 1,
+                    Home: 0,
+                    End: LAST,
+                  }[e.key];
+                  if (to === undefined) return;
+                  e.preventDefault();
+                  goTo(clamp(to, 0, LAST));
                 }}
                 style={{ touchAction: "pan-y" }}
                 className="relative h-10 cursor-pointer select-none"
@@ -181,14 +206,14 @@ export function Investigation() {
             </div>
           </div>
 
-          <Stages p={p} />
+          <Stages p={p} concluded={stage === LAST} />
         </div>
       </div>
     </section>
   );
 }
 
-function Stages({ p }: { p: MotionValue<number> }) {
+function Stages({ p, concluded }: { p: MotionValue<number>; concluded: boolean }) {
   const q = useStage(p, 0);
   const h = useStage(p, 1);
   const e = useStage(p, 2);
@@ -199,7 +224,6 @@ function Stages({ p }: { p: MotionValue<number> }) {
   const hs = useLift(h);
   const es = useLift(e);
   const cs = useLift(c);
-  const ruledOut = useTransform(c, [0, 1], [1, 0.5]);
 
   return (
     <div className="grid gap-px bg-line lg:grid-cols-[1fr_1.5fr_1fr]">
@@ -213,15 +237,22 @@ function Stages({ p }: { p: MotionValue<number> }) {
             { id: "H1", text: "The shorter system prompt", win: true },
             { id: "H2", text: "The higher temperature", win: false },
           ].map((x) => (
-            <motion.div key={x.id} style={x.win ? undefined : { opacity: ruledOut }} className="rounded-2xl border bg-subtle p-3.5">
+            <div key={x.id} className="rounded-2xl border bg-subtle p-3.5">
               <p className="t-overline flex items-center gap-2 text-ink-3">
                 {x.id} · competing
                 <motion.span style={{ opacity: c }} className={`ml-auto normal-case tracking-normal ${x.win ? "text-ok" : ""}`}>
                   {x.win ? "supported" : "ruled out"}
                 </motion.span>
               </p>
-              <p className="t-body mt-1 font-medium">{x.text}</p>
-            </motion.div>
+              {/* Ruled out reads as struck through, never faded: faded text would fall below 4.5:1. */}
+              <p
+                className={`t-body mt-1 font-medium decoration-[1.5px] transition-[text-decoration-color] duration-300 ${
+                  x.win ? "" : `line-through ${concluded ? "decoration-ink-3" : "decoration-transparent"}`
+                }`}
+              >
+                {x.text}
+              </p>
+            </div>
           ))}
         </motion.div>
       </div>

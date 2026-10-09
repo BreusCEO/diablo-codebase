@@ -273,10 +273,20 @@
     animation: fade 0.2s ease both;
   }
   .caret {
-    animation: none;
+    display: none;
   }
   .press:active {
     transform: none;
+  }
+  /* A mark with an intro is served in its "before" pose; show it finished, from the first paint. */
+  [data-part="lens"],
+  [data-part="head"],
+  [data-part="eye"],
+  [data-part="crescent"] {
+    transform: none !important;
+  }
+  [data-part="crescent"] {
+    opacity: 1 !important;
   }
 }
 @keyframes fade {

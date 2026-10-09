@@ -3,7 +3,7 @@
 import { useEffect, useId } from "react";
 import { animate, motion, useAnimate, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import { MARK_PATHS, MARK_VIEWBOX } from "@/lib/mark-paths";
-
+import { reducedMotionNow } from "@/lib/motion";
 
 const [VX, VY, VW, VH] = MARK_VIEWBOX.split(" ").map(Number);
 const FACE = { x: 700, y: 550 };
@@ -24,17 +24,16 @@ function bindActivity() {
   window.addEventListener("keydown", mark, { passive: true });
 }
 
-export function useReduce() {
-  const os = useReducedMotion();
-
-  return !!os;
-}
 
 /**
  * The mark, alive. The head is masked so the eyes are real holes and the mark
  * works on any background. Eyes open, follow the pointer and blink; the head
  * and crescent can reveal themselves once. Everything stops under reduced
  * motion (the system setting), leaving the static mark.
+ *
+ * The markup never depends on that setting (the server cannot know it): a mark
+ * with an intro is rendered in its "before" pose, and under reduced motion CSS
+ * shows it finished from the first paint, then the effect makes that final.
  */
 export function LiveMark({
   size = 20,
@@ -58,8 +57,7 @@ export function LiveMark({
 }) {
   const uid = useId().replace(/[:«»]/g, "");
   const [scope, animateScope] = useAnimate();
-  const reduce = useReduce();
-  const animated = intro !== "none" && !reduce;
+  const reduce = !!useReducedMotion();
 
   // ── Eyes: pointer tracking ──────────────────────────────────────
   const lookX = useMotionValue(0);
@@ -125,7 +123,17 @@ export function LiveMark({
 
   // ── The reveal ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!animated) {
+    if (intro === "none") {
+      onIntroDone?.();
+      return;
+    }
+    if (reducedMotionNow()) {
+      // Straight to the finished mark, with no travel.
+      const now = { duration: 0 };
+      animateScope(`[data-part=lens]`, { scale: 1 }, now);
+      animateScope(`[data-part=head]`, { rotate: 0, scale: 1 }, now);
+      animateScope(`[data-part=eye]`, { scaleY: 1 }, now);
+      animateScope(`[data-part=crescent]`, { opacity: 1, x: 0, y: 0, rotate: 0 }, now);
       onIntroDone?.();
       return;
     }
@@ -172,7 +180,7 @@ export function LiveMark({
   }, []);
 
   const w = (size * VW) / VH;
-  const hidden = animated;
+  const hidden = intro !== "none";
   const box = { x: VX - 200, y: VY - 200, width: VW + 400, height: VH + 400 };
 
   return (

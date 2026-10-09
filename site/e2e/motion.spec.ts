@@ -29,7 +29,7 @@ function transforms(page: Page) {
 }
 
 test.describe("reduced motion", () => {
-  test.use({ reducedMotion: "reduce" });
+  test.use({ contextOptions: { reducedMotion: "reduce" } });
 
   for (const route of ROUTES) {
     test(`${route}: everything is shown at once and nothing moves`, async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe("reduced motion", () => {
 
   test("home: the dial stays put, the example is shown finished, the question is shown whole", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator(".caret")).toHaveCount(0);
+    await expect(page.locator(".caret")).toBeHidden();
     await expect(page.getByRole("button", { name: /^Example question: .+\? Show the next one\.$/ })).toBeVisible();
     const scrub = page.getByRole("slider", { name: "Investigation stage" });
     await expect(scrub).toHaveAttribute("aria-valuenow", "5");

@@ -58,53 +58,55 @@ export function Flywheel() {
   });
 
   return (
-    <div
-      ref={box}
-      onPointerDown={onPointerDown}
-      style={{ touchAction: "pan-y" }}
-      className="relative mx-auto aspect-square w-full max-w-[28rem] cursor-grab select-none active:cursor-grabbing"
-      aria-hidden
-    >
-      <motion.div className="absolute inset-0" style={{ rotate: rot }}>
-        <svg viewBox="-110 -110 220 220" className="size-full overflow-visible">
-          <defs>
-            <marker id="fw-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-              <path d="M0 0 10 5 0 10Z" fill="var(--ink-3)" />
-            </marker>
-          </defs>
-          {TURNS.map((_, i) => {
-            const R = 75;
-            const a0 = (i / TURNS.length) * Math.PI * 2 - Math.PI / 2 + 0.42;
-            const a1 = ((i + 1) / TURNS.length) * Math.PI * 2 - Math.PI / 2 - 0.42;
+    // On phones the wheel sits a little in from the edges, so the labels on its rim never leave the screen.
+    <div className="px-6 sm:px-0" aria-hidden>
+      <div
+        ref={box}
+        onPointerDown={onPointerDown}
+        style={{ touchAction: "pan-y" }}
+        className="relative mx-auto aspect-square w-full max-w-[28rem] cursor-grab select-none active:cursor-grabbing"
+      >
+        <motion.div className="absolute inset-0" style={{ rotate: rot }}>
+          <svg viewBox="-110 -110 220 220" className="size-full overflow-visible">
+            <defs>
+              <marker id="fw-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M0 0 10 5 0 10Z" fill="var(--ink-3)" />
+              </marker>
+            </defs>
+            {TURNS.map((_, i) => {
+              const R = 75;
+              const a0 = (i / TURNS.length) * Math.PI * 2 - Math.PI / 2 + 0.42;
+              const a1 = ((i + 1) / TURNS.length) * Math.PI * 2 - Math.PI / 2 - 0.42;
+              return (
+                <path
+                  key={i}
+                  d={`M ${r3(Math.cos(a0) * R)} ${r3(Math.sin(a0) * R)} A ${R} ${R} 0 0 1 ${r3(Math.cos(a1) * R)} ${r3(Math.sin(a1) * R)}`}
+                  fill="none"
+                  stroke="var(--ink-3)"
+                  strokeWidth="0.8"
+                  markerEnd="url(#fw-arrow)"
+                />
+              );
+            })}
+          </svg>
+          {TURNS.map((t, i) => {
+            const a = (i / TURNS.length) * Math.PI * 2 - Math.PI / 2;
+            const k = (75 / 220) * 100;
             return (
-              <path
-                key={i}
-                d={`M ${r3(Math.cos(a0) * R)} ${r3(Math.sin(a0) * R)} A ${R} ${R} 0 0 1 ${r3(Math.cos(a1) * R)} ${r3(Math.sin(a1) * R)}`}
-                fill="none"
-                stroke="var(--ink-3)"
-                strokeWidth="0.8"
-                markerEnd="url(#fw-arrow)"
-              />
+              <div key={t} className="absolute" style={{ left: `${r3(50 + Math.cos(a) * k)}%`, top: `${r3(50 + Math.sin(a) * k)}%` }}>
+                <motion.span
+                  style={{ rotate: upright, x: "-50%", y: "-50%" }}
+                  className="t-caption absolute left-0 top-0 whitespace-nowrap rounded-full border bg-surface px-3 py-1.5 font-semibold shadow-2"
+                >
+                  {t}
+                </motion.span>
+              </div>
             );
           })}
-        </svg>
-        {TURNS.map((t, i) => {
-          const a = (i / TURNS.length) * Math.PI * 2 - Math.PI / 2;
-          const k = (75 / 220) * 100;
-          return (
-            <div key={t} className="absolute" style={{ left: `${r3(50 + Math.cos(a) * k)}%`, top: `${r3(50 + Math.sin(a) * k)}%` }}>
-              <motion.span
-                style={{ rotate: upright, x: "-50%", y: "-50%" }}
-                className="t-caption absolute left-0 top-0 whitespace-nowrap rounded-full border bg-surface px-3 py-1.5 font-semibold shadow-2"
-              >
-                {t}
-              </motion.span>
-            </div>
-          );
-        })}
-      </motion.div>
-      <div className="absolute inset-[37%] grid place-items-center rounded-full bg-burgundy text-cream shadow-3">
-        <LiveMark size={52} track blink />
+        </motion.div>
+        <div className="absolute inset-[37%] grid place-items-center rounded-full bg-burgundy text-cream shadow-3">
+          <LiveMark size={52} track blink />
+        </div>
       </div>
     </div>
   );

@@ -13,11 +13,13 @@ import { NAV } from "@/lib/site";
  * The phone menu as a bottom sheet. It enters from the bottom and leaves the
  * same way; it follows the finger 1:1, resists being pulled up, and on release
  * projects the flick to decide whether to close. It can be grabbed again while
- * it is still closing. A scrim dims the page because this is a modal task.
+ * it is still closing. A scrim dims the page because this is a modal task:
+ * while it is open the page behind is inert, and Tab cycles inside the sheet.
  */
 export function MenuSheet({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const reduce = useReducedMotion();
   const path = usePathname();
+  const layer = useRef<HTMLDivElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
   const sheetWantsOpen = useRef(false);
   const startY = useRef(0);
@@ -60,20 +62,43 @@ export function MenuSheet({ open, onOpenChange }: { open: boolean; onOpenChange:
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mounted]);
 
-  // Escape closes; the page behind does not scroll; focus moves in and back out.
+  // Escape closes; the page behind does not scroll and cannot be reached; focus moves in, stays in, and goes back out.
   useEffect(() => {
     if (!open) return;
     const prev = document.activeElement as HTMLElement | null;
     const root = document.documentElement;
     const overflow = root.style.overflow;
     root.style.overflow = "hidden";
-    sheet.current?.querySelector<HTMLElement>("a,button")?.focus();
+    const behind = [...document.body.children].filter(
+      (el) => el !== layer.current && !el.hasAttribute("inert") && !["SCRIPT", "NEXT-ROUTE-ANNOUNCER"].includes(el.tagName),
+    );
+    for (const el of behind) el.setAttribute("inert", "");
+    const stops = () => [...(sheet.current?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])") ?? [])];
+    stops()[0]?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") {
+        close();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const all = stops();
+      if (!all.length) return;
+      const first = all[0];
+      const last = all[all.length - 1];
+      const at = document.activeElement;
+      const inside = !!at && !!sheet.current?.contains(at);
+      if (e.shiftKey && (at === first || !inside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (at === last || !inside)) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      for (const el of behind) el.removeAttribute("inert");
       root.style.overflow = overflow;
       prev?.focus?.();
     };
@@ -112,7 +137,7 @@ export function MenuSheet({ open, onOpenChange }: { open: boolean; onOpenChange:
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 md:hidden" role="presentation">
+    <div ref={layer} className="fixed inset-0 z-50 md:hidden" role="presentation">
       <motion.div
         aria-hidden
         className="absolute inset-0"

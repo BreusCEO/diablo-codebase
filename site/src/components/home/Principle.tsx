@@ -154,8 +154,11 @@ function Grounding() {
             ref={track}
             onPointerDown={onPointerDown}
             onKeyDown={(e) => {
-              if (e.key === "ArrowRight") settle(1);
-              if (e.key === "ArrowLeft") settle(0);
+              const to = ({ ArrowRight: 1, ArrowUp: 1, End: 1, ArrowLeft: 0, ArrowDown: 0, Home: 0 } as const)[e.key];
+              if (to === undefined) return;
+              e.preventDefault();
+              if (to !== side) tick();
+              settle(to);
             }}
             role="slider"
             tabIndex={0}
