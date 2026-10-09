@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
+import { INTRO_SCRIPT } from "@/lib/intro";
 import { SHARE_IMAGE, SITE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -42,8 +43,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        {/* Decides before first paint whether the landing intro plays (see SiteIntro). */}
+        <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
         <noscript dangerouslySetInnerHTML={{ __html: `<style>${NO_SCRIPT_CSS}</style>` }} />
       </head>
       <body className="min-h-dvh">
