@@ -32,9 +32,14 @@ function parseScenario(spec: string): { cell: Cell; rep: number } {
 
 const at = args.indexOf("--scenario");
 if (at >= 0) {
-  const { cell, rep } = parseScenario(args[at + 1] ?? "");
-  console.log(renderAnalysis(analyze(cell, rep)));
-  process.exit(0);
+  try {
+    const { cell, rep } = parseScenario(args[at + 1] ?? "");
+    console.log(renderAnalysis(analyze(cell, rep)));
+    process.exit(0);
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : e);
+    process.exit(2);
+  }
 }
 
 const started = performance.now();

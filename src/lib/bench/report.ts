@@ -207,7 +207,7 @@ function methodsSection(): string {
     "",
     "Scoring, per scenario: **right** means the method blamed exactly the true cause; **innocent factor blamed** means it blamed at least one factor that changed nothing (with or without the true cause); **nothing named** means it reported no attributable cause although one existed. When no factor had any effect, naming anything is a **false alarm**; with no true cause, every attribution is false, so this rate is also the false discovery rate.",
     "",
-    "The Diablo protocol here is the measuring half of an investigation: it assumes the reasoning half proposed the right candidate factors and designed one clean experiment per factor. `src/lib/bench/bridge.test.ts` checks that it agrees with the app's own `holmAdjusted` and `analyzeRun` on an investigation built from the same counts.",
+    "The Diablo protocol here is the measuring half of an investigation: it assumes the reasoning half proposed the right candidate factors and designed one clean experiment per factor. `src/lib/bench/bridge.test.ts` checks that it agrees with the app's own `holmAdjusted` and `analyzeRun` on an investigation built from the same counts. In the app, this rule is check C7 (the Holm-adjusted p) on a hypothesis that predicts a decrease; the app's per-hypothesis verdict uses the confidence interval instead (see the CI section for how often the two calls agree).",
   ].join("\n");
 }
 
@@ -255,7 +255,7 @@ function powerSection(result: BenchResult): string {
   const lines = [
     "## Results",
     "",
-    "### Right cause named, by size of the drop and items per arm",
+    "### Right cause named (power), by size of the drop and items per arm",
     "",
     `Pooled over K = ${GRID.K.join(", ")} (${int(GRID.K.length * result.config.reps)} scenarios per row). The last column is the overall before/after test (A): how often it even detects that accuracy fell.`,
     "",
@@ -409,6 +409,7 @@ function coverageSection(result: BenchResult): string {
     header(["n", "True cause: coverage", "Mean width", "Factor with no effect: coverage", "Mean width"]),
   ];
   const off: string[] = [];
+  const all = poolCoverage(result, () => true);
   const rows: [string, CellFilter][] = [...GRID.n.map((n): [string, CellFilter] => [String(n), byCell({ n })]), ["all", () => true]];
   for (const [label, f] of rows) {
     const c = poolCoverage(result, f);
@@ -433,6 +434,8 @@ function coverageSection(result: BenchResult): string {
     off.length
       ? `Read candidly: coverage is within Monte Carlo error of 95% except for ${off.join(" and ")}. Above 95% means the intervals are a little conservative (wider than they need to be); below means a little too narrow.`
       : "Read candidly: every row is within Monte Carlo error of the nominal 95%.",
+    "",
+    `The app's hypothesis verdicts call an effect found when this interval excludes 0; the protocol attributes on the exact test. Before any correction, the two calls agreed on ${pct(all.callsAgree, all.cause.intervals + all.inert.intervals)} of the ${int(all.cause.intervals + all.inert.intervals)} experiments checked.`,
     "",
     `Coverage does not change any attribution, which rests on the exact McNemar test and Holm, but it is what makes the reported interval honest. Note the width: at n = ${GRID.n[0]} the average interval spans ${smallWidth(result)} pp, which is why small samples rarely support a claim.`,
   );

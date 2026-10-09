@@ -1,9 +1,10 @@
 /**
  * Runs the planted-cause benchmark over the scenario grid and tallies how
  * each method's attribution compares with the planted truth. Deterministic:
- * the same config gives the same numbers on every machine.
+ * the same config gives the same numbers on every run.
  */
 import { analyzeRun } from "@/lib/data/derive";
+import { THRESHOLDS } from "@/lib/validity";
 import { experimentRunId, toRun } from "./bridge";
 import { EXAMPLE_SPECS, findExample, type Example } from "./examples";
 import { METHOD_IDS, METHODS, overall, score, type MethodId, type Outcome } from "./methods";
@@ -26,8 +27,6 @@ export interface Tally {
   missed: number;
   quiet: number;
   falseAlarm: number;
-  /** The true cause is among the factors blamed (with or without others). */
-  causeBlamed: number;
   /** No-cause scenarios where v2 happened to score below v1 overall (a drop a team would investigate). */
   dropSeen: number;
   /** False alarms among those. */
@@ -39,6 +38,11 @@ export interface Coverage {
   cause: { intervals: number; covered: number; widthSum: number };
   /** Experiments whose factor changed nothing (true Δ = 0). */
   inert: { intervals: number; covered: number; widthSum: number };
+  /**
+   * Experiments where the app's CI-based call (effect found: the CI excludes 0)
+   * agrees with the raw exact McNemar test at the rubric's alpha.
+   */
+  callsAgree: number;
 }
 
 export interface CellResult {
@@ -67,7 +71,6 @@ export const emptyTally = (): Tally => ({
   missed: 0,
   quiet: 0,
   falseAlarm: 0,
-  causeBlamed: 0,
   dropSeen: 0,
   falseAlarmAfterDrop: 0,
 });
@@ -75,6 +78,7 @@ export const emptyTally = (): Tally => ({
 const emptyCoverage = (): Coverage => ({
   cause: { intervals: 0, covered: 0, widthSum: 0 },
   inert: { intervals: 0, covered: 0, widthSum: 0 },
+  callsAgree: 0,
 });
 
 const OUTCOME_FIELD: Record<Outcome, keyof Tally> = {
@@ -106,7 +110,6 @@ export function runCell(cell: Cell, { reps, coverageReps }: BenchConfig): CellRe
       const outcome = score(blamed, cause);
       t.scenarios++;
       t[OUTCOME_FIELD[outcome]]++;
-      if (cause !== null && blamed.includes(cause)) t.causeBlamed++;
       if (dropSeen) {
         t.dropSeen++;
         if (outcome === "false-alarm") t.falseAlarmAfterDrop++;
@@ -117,7 +120,9 @@ export function runCell(cell: Cell, { reps, coverageReps }: BenchConfig): CellRe
       const truth = trueDeltas(data.scenario);
       data.experiments.forEach((e, j) => {
         // Diablo's own analysis of a paired run: the seeded paired bootstrap (2,000 resamples).
-        const [lo, hi] = analyzeRun(toRun(experimentRunId(data, rep, j), e), "paired")!.diffCI;
+        const r = analyzeRun(toRun(experimentRunId(data, rep, j), e), "paired")!;
+        const [lo, hi] = r.diffCI;
+        if (r.p < THRESHOLDS.alpha === r.effectFound) coverage.callsAgree++;
         const bucket = j === cause ? coverage.cause : coverage.inert;
         bucket.intervals++;
         if (lo <= truth[j] && truth[j] <= hi) bucket.covered++;
@@ -171,6 +176,7 @@ export function poolCoverage(result: BenchResult, keep: CellFilter): Coverage {
       out[k].covered += r.coverage[k].covered;
       out[k].widthSum += r.coverage[k].widthSum;
     }
+    out.callsAgree += r.coverage.callsAgree;
   }
   return out;
 }

@@ -74,11 +74,11 @@ All five run on the same simulated data (A on the v1 and v2 runs, the others on 
 
 Scoring, per scenario: **right** means the method blamed exactly the true cause; **innocent factor blamed** means it blamed at least one factor that changed nothing (with or without the true cause); **nothing named** means it reported no attributable cause although one existed. When no factor had any effect, naming anything is a **false alarm**; with no true cause, every attribution is false, so this rate is also the false discovery rate.
 
-The Diablo protocol here is the measuring half of an investigation: it assumes the reasoning half proposed the right candidate factors and designed one clean experiment per factor. `src/lib/bench/bridge.test.ts` checks that it agrees with the app's own `holmAdjusted` and `analyzeRun` on an investigation built from the same counts.
+The Diablo protocol here is the measuring half of an investigation: it assumes the reasoning half proposed the right candidate factors and designed one clean experiment per factor. `src/lib/bench/bridge.test.ts` checks that it agrees with the app's own `holmAdjusted` and `analyzeRun` on an investigation built from the same counts. In the app, this rule is check C7 (the Holm-adjusted p) on a hypothesis that predicts a decrease; the app's per-hypothesis verdict uses the confidence interval instead (see the CI section for how often the two calls agree).
 
 ## Results
 
-### Right cause named, by size of the drop and items per arm
+### Right cause named (power), by size of the drop and items per arm
 
 Pooled over K = 2, 3, 4 (3,000 scenarios per row). The last column is the overall before/after test (A): how often it even detects that accuracy fell.
 
@@ -169,6 +169,8 @@ Every experiment's 95% CI for Δ, computed by the app's own `analyzeRun` (paired
 | all | 95.5% (94.4 to 96.4), 1,800 CIs | 21.5 pp | 96.1% (95.6 to 96.6), 4,950 CIs | 19.7 pp |
 
 Read candidly: coverage is within Monte Carlo error of 95% except for no-effect intervals at n = 40 (above 95%). Above 95% means the intervals are a little conservative (wider than they need to be); below means a little too narrow.
+
+The app's hypothesis verdicts call an effect found when this interval excludes 0; the protocol attributes on the exact test. Before any correction, the two calls agreed on 97.2% of the 6,750 experiments checked.
 
 Coverage does not change any attribution, which rests on the exact McNemar test and Holm, but it is what makes the reported interval honest. Note the width: at n = 40 the average interval spans 27.2 pp, which is why small samples rarely support a claim.
 
