@@ -12,5 +12,7 @@ export default defineConfig({
   test: {
     include: ["src/**/*.test.ts"],
     environment: "node",
+    // Unit tests cover the demo workspace too; production builds leave it off.
+    env: { NEXT_PUBLIC_DEMO_MODE: "1" },
   },
 });

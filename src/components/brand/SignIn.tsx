@@ -1,8 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { DEMO_MODE } from "@/lib/demo-mode";
 import { useRef, useEffect, useState, type FormEvent } from "react";
-import { AnimatePresence, motion, useMotionTemplate, useMotionValue, useSpring, useTransform } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "motion/react";
 import { ArrowRight } from "lucide-react";
 import { safeNext } from "@/lib/auth/next-path";
 import { BRAND } from "@/lib/brand";
@@ -10,13 +18,15 @@ import { LiveMark, useReduce } from "./LiveMark";
 
 /** What a failed sign-in comes back with (`/?error=<code>`), in plain words. */
 const ERRORS: Record<string, string> = {
-  access_denied: "Google sign-in was cancelled. Try again, or enter the demo workspace.",
-  state_mismatch: "That sign-in attempt expired or was started in another tab. Please try again.",
+  access_denied: "Google sign-in was cancelled. Try again.",
+  state_mismatch:
+    "That sign-in attempt expired or was started in another tab. Please try again.",
   exchange_failed: "Google couldn't confirm your sign-in. Please try again.",
   unverified_email: "Your Google account's email address isn't verified yet.",
-  google_unavailable: "Google sign-in isn't set up on this server. Enter the demo workspace instead.",
+  google_unavailable: "Google sign-in isn't set up on this server yet.",
   server_error: "Something went wrong while signing you in. Please try again.",
-  demo_failed: "The demo workspace couldn't be opened. Please reload and try again.",
+  demo_failed:
+    "The demo workspace couldn't be opened. Please reload and try again.",
 };
 
 /**
@@ -39,7 +49,15 @@ function errorMessage(code: string | null): string | null {
  * `next` arrives from the server already sanitised ("" when there is none),
  * so the hidden field carries it even when no script runs.
  */
-export function SignIn({ googleEnabled, next: requested, error: errorCode }: { googleEnabled: boolean; next: string; error: string | null }) {
+export function SignIn({
+  googleEnabled,
+  next: requested,
+  error: errorCode,
+}: {
+  googleEnabled: boolean;
+  next: string;
+  error: string | null;
+}) {
   const reduce = useReduce();
   const next = safeNext(requested);
   const error = errorMessage(errorCode);
@@ -94,7 +112,8 @@ export function SignIn({ googleEnabled, next: requested, error: errorCode }: { g
         redirect: "manual",
         credentials: "same-origin",
       });
-      if (res.type !== "opaqueredirect" && !res.ok) throw new Error(String(res.status));
+      if (res.type !== "opaqueredirect" && !res.ok)
+        throw new Error(String(res.status));
     } catch {
       setPending(false);
       setFailed(true);
@@ -105,12 +124,18 @@ export function SignIn({ googleEnabled, next: requested, error: errorCode }: { g
       return;
     }
     const r = button.current?.getBoundingClientRect();
-    setLeaving(r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : { x: innerWidth / 2, y: innerHeight / 2 });
+    setLeaving(
+      r
+        ? { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+        : { x: innerWidth / 2, y: innerHeight / 2 },
+    );
     setTimeout(() => window.location.assign(next), 560);
   };
 
   const message = failed ? ERRORS.demo_failed : error;
-  const googleHref = requested ? `/api/auth/google?next=${encodeURIComponent(requested)}` : "/api/auth/google";
+  const googleHref = requested
+    ? `/api/auth/google?next=${encodeURIComponent(requested)}`
+    : "/api/auth/google";
 
   return (
     <main
@@ -124,28 +149,65 @@ export function SignIn({ googleEnabled, next: requested, error: errorCode }: { g
       }}
     >
       {/* Dark theme: the burgundy sinks into the warm plum of the app. */}
-      <div aria-hidden className="entrance-plum pointer-events-none absolute inset-0" />
-      {!reduce && <motion.div aria-hidden className="pointer-events-none absolute inset-0" style={{ background: light }} />}
+      <div
+        aria-hidden
+        className="entrance-plum pointer-events-none absolute inset-0"
+      />
+      {!reduce && (
+        <motion.div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{ background: light }}
+        />
+      )}
       {/* Without JavaScript the mark simply appears, finished. */}
       <noscript>
         <style>{`.entrance [data-part=lens],.entrance [data-part=eye]{transform:none!important}.entrance [data-part=crescent]{opacity:1!important}.entrance [data-part=seed],.entrance [data-part=outline]{display:none}`}</style>
       </noscript>
-      <div aria-hidden className="entrance-grain pointer-events-none absolute inset-0" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgb(30_0_9/0.5)_100%)]" />
+      <div
+        aria-hidden
+        className="entrance-grain pointer-events-none absolute inset-0"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgb(30_0_9/0.5)_100%)]"
+      />
 
       <div className="relative flex w-full max-w-[400px] flex-col items-center text-center">
-        <motion.div style={reduce ? undefined : { rotateX, rotateY, transformStyle: "preserve-3d" }}>
-          <LiveMark key={skipped ? "skipped" : "intro"} size={96} intro={skipped ? "none" : "auto"} track blink title={BRAND.name} />
+        <motion.div
+          style={
+            reduce
+              ? undefined
+              : { rotateX, rotateY, transformStyle: "preserve-3d" }
+          }
+        >
+          <LiveMark
+            key={skipped ? "skipped" : "intro"}
+            size={96}
+            intro={skipped ? "none" : "auto"}
+            track
+            blink
+            title={BRAND.name}
+          />
         </motion.div>
 
-        <p className="entrance-name mt-5 text-[12px] font-medium uppercase tracking-[0.22em] text-cream/80">{BRAND.name}</p>
+        <p className="entrance-name mt-5 text-[12px] font-medium uppercase tracking-[0.22em] text-cream/80">
+          {BRAND.name}
+        </p>
 
         <div className="entrance-auth glass mt-7 flex w-full flex-col items-center rounded-[16px] px-6 pb-6 pt-7 sm:px-8">
-          <h1 className="text-[26px] font-semibold leading-[34px] tracking-[-0.02em]">{BRAND.tagline}</h1>
-          <p className="mt-2 text-[15px] leading-6 text-cream/80">Sign in to research, test, and understand the AI systems you build.</p>
+          <h1 className="text-[26px] font-semibold leading-[34px] tracking-[-0.02em]">
+            {BRAND.tagline}
+          </h1>
+          <p className="mt-2 text-[15px] leading-6 text-cream/80">
+            Sign in to research, test, and understand the AI systems you build.
+          </p>
 
           {message && (
-            <p role="alert" className="mt-5 w-full rounded-[8px] border border-cream/20 bg-[rgb(30_0_9/0.45)] px-3 py-2 text-left text-[13px] leading-5 text-cream">
+            <p
+              role="alert"
+              className="mt-5 w-full rounded-[8px] border border-cream/20 bg-[rgb(30_0_9/0.45)] px-3 py-2 text-left text-[13px] leading-5 text-cream"
+            >
               {message}
             </p>
           )}
@@ -169,45 +231,74 @@ export function SignIn({ googleEnabled, next: requested, error: errorCode }: { g
                 <GoogleG />
                 Continue with Google
               </button>
-              <p id="google-unavailable" className="mt-2 text-[12px] text-cream/80">
+              <p
+                id="google-unavailable"
+                className="mt-2 text-[12px] text-cream/80"
+              >
                 Google sign-in is not configured on this server.
               </p>
             </>
           )}
 
-          <div aria-hidden className="my-4 flex w-full items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-cream/80">
-            <span className="h-px flex-1 bg-cream/20" />
-            or
-            <span className="h-px flex-1 bg-cream/20" />
-          </div>
+          {DEMO_MODE && (
+            <>
+              <div
+                aria-hidden
+                className="my-4 flex w-full items-center gap-3 text-[12px] uppercase tracking-[0.18em] text-cream/80"
+              >
+                <span className="h-px flex-1 bg-cream/20" />
+                or
+                <span className="h-px flex-1 bg-cream/20" />
+              </div>
 
-          <form method="post" action="/api/auth/demo" onSubmit={enterDemo} className="w-full">
-            <input type="hidden" name="next" value={requested} />
-            <motion.button
-              ref={button}
-              type="submit"
-              aria-busy={pending || undefined}
-              whileTap={reduce ? undefined : { scale: 0.98 }}
-              className="group flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-cream/35 bg-cream/[0.06] text-[15px] font-medium text-cream transition-colors duration-150 hover:border-cream/60 hover:bg-cream/[0.12] focus-visible:outline-cream"
-            >
-              Enter demo workspace
-              <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" strokeWidth={2} />
-            </motion.button>
-          </form>
-          <p className="mt-3 text-[12px] leading-[18px] text-cream/80">The demo uses sample data and keeps nothing after you leave.</p>
+              <form
+                method="post"
+                action="/api/auth/demo"
+                onSubmit={enterDemo}
+                className="w-full"
+              >
+                <input type="hidden" name="next" value={requested} />
+                <motion.button
+                  ref={button}
+                  type="submit"
+                  aria-busy={pending || undefined}
+                  whileTap={reduce ? undefined : { scale: 0.98 }}
+                  className="group flex h-11 w-full items-center justify-center gap-2 rounded-[8px] border border-cream/35 bg-cream/[0.06] text-[15px] font-medium text-cream transition-colors duration-150 hover:border-cream/60 hover:bg-cream/[0.12] focus-visible:outline-cream"
+                >
+                  Enter demo workspace
+                  <ArrowRight
+                    className="size-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                    strokeWidth={2}
+                  />
+                </motion.button>
+              </form>
+              <p className="mt-3 text-[12px] leading-[18px] text-cream/80">
+                The demo uses sample data and keeps nothing after you leave.
+              </p>
+            </>
+          )}
         </div>
 
         <p className="entrance-auth mt-6 max-w-[340px] text-[12px] leading-[18px] text-cream/80">
           By continuing you agree to the{" "}
-          <Link href="/legal/terms" className="text-cream underline underline-offset-2 hover:text-white">
+          <Link
+            href="/legal/terms"
+            className="text-cream underline underline-offset-2 hover:text-white"
+          >
             Terms of Service
           </Link>{" "}
           and{" "}
-          <Link href="/legal/privacy" className="text-cream underline underline-offset-2 hover:text-white">
+          <Link
+            href="/legal/privacy"
+            className="text-cream underline underline-offset-2 hover:text-white"
+          >
             Privacy Policy
           </Link>
           .{" "}
-          <Link href="/legal/usage" className="underline underline-offset-2 hover:text-white">
+          <Link
+            href="/legal/usage"
+            className="underline underline-offset-2 hover:text-white"
+          >
             Usage Policy
           </Link>
         </p>
@@ -219,8 +310,12 @@ export function SignIn({ googleEnabled, next: requested, error: errorCode }: { g
           <motion.div
             aria-hidden
             className="fixed inset-0 z-50 bg-bg"
-            initial={{ clipPath: `circle(0px at ${leaving.x}px ${leaving.y}px)` }}
-            animate={{ clipPath: `circle(150vmax at ${leaving.x}px ${leaving.y}px)` }}
+            initial={{
+              clipPath: `circle(0px at ${leaving.x}px ${leaving.y}px)`,
+            }}
+            animate={{
+              clipPath: `circle(150vmax at ${leaving.x}px ${leaving.y}px)`,
+            }}
             transition={{ duration: 0.6, ease: [0.65, 0, 0.35, 1] }}
           />
         )}
@@ -235,11 +330,29 @@ export function SignIn({ googleEnabled, next: requested, error: errorCode }: { g
  */
 function GoogleG() {
   return (
-    <svg aria-hidden width="18" height="18" viewBox="0 0 48 48" className="shrink-0">
-      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
-      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
-      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    <svg
+      aria-hidden
+      width="18"
+      height="18"
+      viewBox="0 0 48 48"
+      className="shrink-0"
+    >
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
     </svg>
   );
 }
