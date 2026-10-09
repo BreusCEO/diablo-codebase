@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { authSecret, googleConfig, secureCookies } from "@/lib/auth/env";
 import { authorizationUrl, newFlow, OAUTH_COOKIE, OAUTH_COOKIE_PATH, OAUTH_TTL_SECONDS, sealFlow } from "@/lib/auth/google";
-import { originOf, redirectTo, redirectWithError, requestOrigin } from "@/lib/auth/http";
+import { authFailure, originOf, redirectTo, redirectWithError, requestOrigin } from "@/lib/auth/http";
 import { safeNext } from "@/lib/auth/next-path";
 
 /**
@@ -10,6 +10,14 @@ import { safeNext } from "@/lib/auth/next-path";
  * hop to accounts.google.com.
  */
 export async function GET(request: NextRequest) {
+  try {
+    return await handle(request);
+  } catch (err) {
+    return authFailure(request, err);
+  }
+}
+
+async function handle(request: NextRequest) {
   const next = safeNext(request.nextUrl.searchParams.get("next"));
   const config = googleConfig();
   if (!config) return redirectWithError(request, "google_unavailable", next);

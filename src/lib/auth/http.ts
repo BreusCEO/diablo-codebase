@@ -66,3 +66,19 @@ export function clearFlow(res: NextResponse): NextResponse {
   res.cookies.set(OAUTH_COOKIE, "", { httpOnly: true, secure: secureCookies(), sameSite: "lax", path: OAUTH_COOKIE_PATH, maxAge: 0 });
   return res;
 }
+
+/**
+ * Last resort for the sign-in routes: whatever throws (a missing secret, a
+ * broken cookie, an unexpected response), the visitor goes back to the
+ * sign-in page with a message, never to a 500 page.
+ */
+export function authFailure(request: NextRequest, err: unknown): NextResponse {
+  console.error("[auth] sign-in failed unexpectedly:", err instanceof Error ? err.message : "unknown error");
+  try {
+    return clearFlow(redirectWithError(request, "server_error"));
+  } catch {
+    const res = NextResponse.redirect(new URL("/?error=server_error", request.url), 302);
+    res.headers.set("Cache-Control", "no-store");
+    return res;
+  }
+}
