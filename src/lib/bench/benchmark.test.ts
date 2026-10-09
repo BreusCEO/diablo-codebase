@@ -76,12 +76,17 @@ describe("headline numbers quoted in SUBMISSION.md and SCORECARD.md", () => {
     expect(pct(C.cause.correct, C.cause.scenarios)).toBe("49.7%");
     expect(pct(C.cause.wrong, C.cause.scenarios)).toBe("2.4%");
     expect(pct(C.none.falseAlarm, C.none.scenarios)).toBe("4.1%");
+    const nr = namedRight(C.all);
+    expect(pct(nr.right, nr.named)).toBe("93.5%");
   });
 
   it("B. Unpaired tests with Holm", () => {
     const B = h.method.unpaired;
     expect(pct(B.cause.correct, B.cause.scenarios)).toBe("31.7%");
+    expect(pct(B.cause.wrong, B.cause.scenarios)).toBe("0.3%");
     expect(pct(B.none.falseAlarm, B.none.scenarios)).toBe("0.4%");
+    const nr = namedRight(B.all);
+    expect(pct(nr.right, nr.named)).toBe("98.6%");
   });
 
   it("A. Overall before/after detects the drop but never attributes", () => {

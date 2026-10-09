@@ -198,7 +198,7 @@ function methodsSection(): string {
   return [
     "## Methods compared",
     "",
-    "All five see the same simulated counts. Every statistic is computed by the app's own `src/lib/stats.ts`; the significance level is the validity rubric's (`THRESHOLDS.alpha = " +
+    "All five run on the same simulated data (A on the v1 and v2 runs, the others on the per-factor experiments). Every statistic is computed by the app's own `src/lib/stats.ts`; the significance level is the validity rubric's (`THRESHOLDS.alpha = " +
       THRESHOLDS.alpha +
       "`). A factor is only ever blamed if its accuracy fell, because the question is what caused a drop.",
     "",
