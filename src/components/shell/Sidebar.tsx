@@ -13,17 +13,15 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { ModKey } from "@/components/ui/primitives";
 import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/cn";
-import { provider, sortInvestigations, useNow, useWorkspace } from "@/lib/data";
+import { provider, sortInvestigations, useWorkspace } from "@/lib/data";
 import { investigationStatus } from "@/lib/data/derive";
 import type { Investigation } from "@/lib/data/types";
-import { recencyGroup, type RecencyGroup } from "@/lib/format";
 import { setSidebarCollapsed, useSidebarCollapsed } from "@/lib/prefs";
 import { ui } from "@/lib/ui";
 import { AccountMenu, AccountMenuSkeleton } from "./AccountMenu";
 import { DeleteDialog, RenameDialog } from "./InvestigationDialogs";
 import { INVESTIGATIONS, isActive, PRIMARY, SECONDARY, type NavItem } from "./nav";
 
-const GROUPS: RecencyGroup[] = ["Today", "Yesterday", "Previous 7 days", "Older"];
 const RECENT_LIMIT = 12;
 
 /**
@@ -218,7 +216,6 @@ function NavRow({
 
 function Recents({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
   const ws = useWorkspace();
-  const now = useNow(60_000, ws.ready);
   const [showAll, setShowAll] = useState(false);
   const [renaming, setRenaming] = useState<Investigation | null>(null);
   const [deleting, setDeleting] = useState<Investigation | null>(null);
@@ -226,15 +223,12 @@ function Recents({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
   const list = sortInvestigations(ws.investigations);
   const visible = showAll ? list : list.slice(0, RECENT_LIMIT);
   const pinned = visible.filter((i) => i.pinned);
-  const groups = GROUPS.map((g) => ({
-    g,
-    items: visible.filter((i) => !i.pinned && recencyGroup(i.updatedAt, now) === g),
-  })).filter((x) => x.items.length);
+  const rest = visible.filter((i) => !i.pinned);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="px-4 pb-1 text-[12px] text-ink-3" id="recents-label">
-        Recents
+        Investigations
       </div>
       <div className="quiet-scroll min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {!ws.ready ? (
@@ -248,9 +242,7 @@ function Recents({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
         ) : (
           <>
             {pinned.length > 0 && <RecentGroup label="Pinned" items={pinned} {...{ pathname, onNavigate, setRenaming, setDeleting }} />}
-            {groups.map(({ g, items }) => (
-              <RecentGroup key={g} label={g} items={items} {...{ pathname, onNavigate, setRenaming, setDeleting }} />
-            ))}
+            {rest.length > 0 && <RecentGroup label={pinned.length ? "Recent" : ""} items={rest} {...{ pathname, onNavigate, setRenaming, setDeleting }} />}
             {list.length > RECENT_LIMIT && (
               <button
                 type="button"
@@ -286,7 +278,7 @@ function RecentGroup({
 }) {
   return (
     <section className="mt-2 first:mt-0">
-      <h3 className="px-2 pb-0.5 pt-1 text-[12px] text-ink-3">{label}</h3>
+      {label && <h3 className="px-2 pb-0.5 pt-1 text-[12px] text-ink-3">{label}</h3>}
       <ul>
         {items.map((inv) => {
           const href = `/investigations/${inv.id}`;
