@@ -139,7 +139,7 @@ function Scenario() {
         })}
       </ul>
       <p className="mt-3 max-w-[760px] text-[13px] text-ink-2">
-        Items: {DATASET.description} Accuracy is scored by code: the last integer in the reply must equal the exact answer. Every experiment is
+        Items: {DATASET.description} Accuracy is scored by code: the integer on the last “Answer:” line, or else the last integer in the reply, must equal the exact answer. Every experiment is
         paired, so both arms answer the same items.
       </p>
     </section>

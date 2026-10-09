@@ -171,6 +171,10 @@ export async function runPaired({ target, plan, items, caps, signal, now = Date.
       usage.inputTokens += res.usage.inputTokens;
       usage.outputTokens += res.usage.outputTokens;
       reportedModel ??= res.model;
+      // An empty reply cut off by the output limit is our budget's fault, not the target's: leave the pair out.
+      if (!res.text.trim() && /^(MAX_TOKENS|length)$/i.test(res.finishReason ?? "")) {
+        throw new LLMError("bad-response", "The reply was cut off by the output limit before any answer.", { provider: target.provider });
+      }
       const s = scoreReply(res.text, t.item.answer);
       record({
         ...base,

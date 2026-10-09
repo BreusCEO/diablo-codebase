@@ -24,6 +24,8 @@ import { simulateRun } from "./simulate";
 import { liveDataset } from "@/lib/live/dataset";
 import { HELPER_CATALOG } from "@/lib/live/registry";
 
+const LIVE_DATASET = liveDataset();
+
 const KEY = "diablo.workspace";
 /** Keys written by the first prototype; their shape is not compatible. */
 const LEGACY_KEYS = ["diablo.investigations.v1"];
@@ -314,7 +316,7 @@ export const mockProvider: DataProvider = {
   listSystems: () => SYSTEMS,
   getSystem: findSystem,
   listDatasets: () => DATASETS,
-  getDataset: (id) => DATASETS.find((d) => d.id === id) ?? (id === liveDataset().id ? liveDataset() : undefined),
+  getDataset: (id) => DATASETS.find((d) => d.id === id) ?? (id === LIVE_DATASET.id ? LIVE_DATASET : undefined),
 
   createInvestigation(question, systemId) {
     const q = question.trim().slice(0, MAX_QUESTION);

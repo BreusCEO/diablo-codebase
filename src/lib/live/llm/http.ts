@@ -50,7 +50,11 @@ export async function withRetries<T>(
       if (!isRetryable(e) || i >= policy.retries || signal?.aborted) throw e;
       const backoff = policy.baseDelayMs * 2 ** i;
       const delay = Math.min(policy.maxDelayMs, Math.max(backoff, e.retryAfterMs ?? 0));
-      await wait(delay, signal);
+      try {
+        await wait(delay, signal);
+      } catch {
+        throw new LLMError("aborted", "The call was cancelled while waiting to retry.", { provider: e.provider });
+      }
     }
   }
 }

@@ -12,6 +12,8 @@ describe("scorer: the final integer, read by code", () => {
     ["= 5193.0", 5193],
     ["Steps 2-3 give 40", 40],
     ["It is 17 (step-4 was skipped)", 4],
+    ["Answer: 5193 (checked 2 times)", 5193],
+    ["Answer: 12\nAnswer: 5193\nHope this helps, 1 more check done.", 5193],
   ])("%j → %d", (text, n) => {
     expect(finalInteger(text)).toBe(n);
   });

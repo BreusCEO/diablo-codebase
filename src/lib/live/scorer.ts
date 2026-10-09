@@ -21,9 +21,15 @@ export function finalNumber(text: string): number | null {
   return last;
 }
 
-/** The last number if it is an integer, else null. */
+/**
+ * The answer: the number on the last "Answer: …" line when there is one (so a
+ * remark after it cannot change the score), else the last number in the text.
+ * Null when that number is not an integer.
+ */
 export function finalInteger(text: string): number | null {
-  const n = finalNumber(text);
+  const lines = [...text.matchAll(/answer\s*[:=]\s*([^\n]*)/gi)];
+  const marked = lines.length ? finalNumber(lines[lines.length - 1][1].replace(/\(.*$/, "")) : null;
+  const n = marked ?? finalNumber(text);
   return n !== null && Number.isInteger(n) ? n : null;
 }
 
