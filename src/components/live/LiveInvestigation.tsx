@@ -37,7 +37,7 @@ export function LiveInvestigation({ config }: { config: LivePublicConfig }) {
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
-    dispatch({ type: "request" });
+    dispatch({ type: "request", at: Date.now() });
     try {
       const res = await fetch("/api/live/run", {
         method: "POST",
@@ -206,10 +206,10 @@ function Budget({ config }: { config: LivePublicConfig }) {
   );
 }
 
-function Elapsed({ since }: { since: string | null }) {
+function Elapsed({ since }: { since: number | null }) {
   const now = useNow(1000, true);
   if (!since || !now) return null;
-  const s = Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
+  const s = Math.max(0, Math.floor((now - since) / 1000));
   return (
     <span className="font-mono text-[13px] text-ink-3 tabular" aria-label={`Elapsed ${s} seconds`}>
       {Math.floor(s / 60)}:{String(s % 60).padStart(2, "0")}

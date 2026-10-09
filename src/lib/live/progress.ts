@@ -24,7 +24,8 @@ export interface LiveView {
   status: "idle" | "starting" | "running" | "done" | "failed" | "cancelled";
   stages: Record<LiveStage, StageState>;
   models: Models | null;
-  startedAt: string | null;
+  /** When this browser started the run (epoch ms), for the elapsed-time display. */
+  startedAt: number | null;
   draftAttempts: Attempt[];
   plan: Plan | null;
   plannedCalls: number | null;
@@ -37,7 +38,7 @@ export interface LiveView {
 
 export type LiveAction =
   | LiveEvent
-  | { type: "request" }
+  | { type: "request"; at: number }
   | { type: "http-error"; status: number; message: string }
   | { type: "stream-ended" }
   | { type: "cancelled" };
@@ -64,9 +65,9 @@ const finished = (s: LiveView["status"]) => s === "done" || s === "failed" || s 
 export function liveReducer(state: LiveView, action: LiveAction): LiveView {
   switch (action.type) {
     case "request":
-      return { ...INITIAL_VIEW, stages: pendingStages(), status: "starting" };
+      return { ...INITIAL_VIEW, stages: pendingStages(), status: "starting", startedAt: action.at };
     case "start":
-      return { ...state, status: "running", models: action.models, startedAt: action.at };
+      return { ...state, status: "running", models: action.models };
     case "stage": {
       const stages = { ...state.stages, [action.stage]: action.state === "started" ? "active" : "done" };
       return { ...state, status: "running", stages };

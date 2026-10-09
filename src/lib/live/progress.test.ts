@@ -9,7 +9,7 @@ const apply = (actions: LiveAction[]) => actions.reduce(liveReducer, INITIAL_VIE
 describe("live page state", () => {
   it("follows the stages and keeps the latest progress", () => {
     const v = apply([
-      { type: "request" },
+      { type: "request", at: 1 },
       { type: "start", at: "2026-10-09T10:00:00Z", models, caps: DEFAULT_CAPS, estimate: maxCalls(DEFAULT_CAPS) },
       { type: "stage", stage: "draft", state: "started", at: "x" },
       { type: "draft-attempt", attempt: 1, ok: false, problems: ["bad"] },
@@ -27,7 +27,7 @@ describe("live page state", () => {
 
   it("marks the failing stage and keeps the message", () => {
     const v = apply([
-      { type: "request" },
+      { type: "request", at: 1 },
       { type: "stage", stage: "draft", state: "started", at: "x" },
       { type: "error", stage: "draft", code: "draft-invalid", kind: null, message: "no valid plan" },
     ]);
@@ -37,22 +37,22 @@ describe("live page state", () => {
   });
 
   it("a stream that ends without a result is a failure, never a result", () => {
-    const v = apply([{ type: "request" }, { type: "stage", stage: "run", state: "started", at: "x" }, { type: "stream-ended" }]);
+    const v = apply([{ type: "request", at: 1 }, { type: "stage", stage: "run", state: "started", at: "x" }, { type: "stream-ended" }]);
     expect(v.status).toBe("failed");
     expect(v.result).toBeNull();
     expect(v.error?.code).toBe("stream");
   });
 
   it("cancel stops a running view but not a finished one", () => {
-    const running = apply([{ type: "request" }, { type: "stage", stage: "run", state: "started", at: "x" }, { type: "cancelled" }]);
+    const running = apply([{ type: "request", at: 1 }, { type: "stage", stage: "run", state: "started", at: "x" }, { type: "cancelled" }]);
     expect(running.status).toBe("cancelled");
     expect(running.stages.run).toBe("failed");
-    const failed = apply([{ type: "request" }, { type: "http-error", status: 503, message: "not configured" }, { type: "cancelled" }]);
+    const failed = apply([{ type: "request", at: 1 }, { type: "http-error", status: 503, message: "not configured" }, { type: "cancelled" }]);
     expect(failed.status).toBe("failed");
   });
 
   it("a new request starts from a clean slate", () => {
-    const v = apply([{ type: "request" }, { type: "http-error", status: 429, message: "wait" }, { type: "request" }]);
+    const v = apply([{ type: "request", at: 1 }, { type: "http-error", status: 429, message: "wait" }, { type: "request", at: 1 }]);
     expect(v).toMatchObject({ status: "starting", error: null, result: null });
   });
 });
