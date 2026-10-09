@@ -4,7 +4,7 @@ import { ScrollRegion } from "@/components/ui/primitives";
 import { useState } from "react";
 import { ForestPlot, Curve, Heatmap } from "@/components/charts/Charts";
 import { provider, systemName } from "@/lib/data";
-import { analyzeExperiment, finishedExperiments, holmAdjusted, primaryRun, verdictFor } from "@/lib/data/derive";
+import { analyzeExperiment, finishedExperiments, holmAdjusted, isLiveInvestigation, primaryRun, verdictFor } from "@/lib/data/derive";
 import { experimentInterpretation, investigationInterpretation, strengthLine, VERDICT_LABEL } from "@/lib/data/interpret";
 import { count, longDate } from "@/lib/format";
 import { formatCIpp, formatP, formatPct, formatPP, signed } from "@/lib/stats";
@@ -43,7 +43,7 @@ export function ReportTab() {
         </p>
         <p className="text-[13px] leading-5 text-ink-3 print:mt-2">
           {systemName(inv.systemId)} · report generated from the data on <time dateTime={inv.updatedAt}>{longDate(inv.updatedAt)}</time> ·{" "}
-          {provider.label}, simulated runs
+          {isLiveInvestigation(inv) ? "live run on a real model, scored by code" : `${provider.label}, simulated runs`}
         </p>
       </header>
 
