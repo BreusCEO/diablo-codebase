@@ -2,29 +2,20 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
-import { MoreHorizontal, PanelLeft, Pencil, Pin, PinOff, Plus, Search, Trash2 } from "lucide-react";
+import { Suspense } from "react";
+import { PanelLeft, Plus, Search } from "lucide-react";
 import { LayoutGroup, motion } from "motion/react";
 import { LiveMark } from "@/components/brand/LiveMark";
 import { IconButton } from "@/components/ui/Button";
-import { Menu, MenuContent, MenuItem, MenuSeparator, MenuTrigger } from "@/components/ui/Menu";
-import { StatusDot } from "@/components/ui/Status";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { ModKey } from "@/components/ui/primitives";
 import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/cn";
-import { provider, sortInvestigations, useNow, useWorkspace } from "@/lib/data";
-import { investigationStatus } from "@/lib/data/derive";
-import type { Investigation } from "@/lib/data/types";
-import { recencyGroup, type RecencyGroup } from "@/lib/format";
 import { setSidebarCollapsed, useSidebarCollapsed } from "@/lib/prefs";
 import { ui } from "@/lib/ui";
 import { AccountMenu, AccountMenuSkeleton } from "./AccountMenu";
-import { DeleteDialog, RenameDialog } from "./InvestigationDialogs";
 import { INVESTIGATIONS, isActive, PRIMARY, SECONDARY, type NavItem } from "./nav";
 
-const GROUPS: RecencyGroup[] = ["Today", "Yesterday", "Previous 7 days", "Older"];
-const RECENT_LIMIT = 12;
 
 /**
  * Sidebar content, shared by the desktop sidebar and the mobile drawer.
@@ -108,9 +99,7 @@ export function SidebarContent({ variant, onNavigate }: { variant: "desktop" | "
           </ul>
         </LayoutGroup>
 
-        <div className={cn("mt-4 flex min-h-0 flex-1 flex-col", exp)}>
-          <Recents pathname={pathname} onNavigate={onNavigate} />
-        </div>
+        <div className={cn("flex-1", exp)} />
         <div className={cn("flex-1", col)} />
         <LayoutGroup id={`nav-secondary-${variant}`}>
           <ul className="space-y-px border-t border-line px-2 py-2" aria-label="More">
@@ -213,130 +202,5 @@ function NavRow({
     </Tooltip>
   ) : (
     link
-  );
-}
-
-function Recents({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  const ws = useWorkspace();
-  const now = useNow(60_000, ws.ready);
-  const [showAll, setShowAll] = useState(false);
-  const [renaming, setRenaming] = useState<Investigation | null>(null);
-  const [deleting, setDeleting] = useState<Investigation | null>(null);
-
-  const list = sortInvestigations(ws.investigations);
-  const visible = showAll ? list : list.slice(0, RECENT_LIMIT);
-  const pinned = visible.filter((i) => i.pinned);
-  const groups = GROUPS.map((g) => ({
-    g,
-    items: visible.filter((i) => !i.pinned && recencyGroup(i.updatedAt, now) === g),
-  })).filter((x) => x.items.length);
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="px-4 pb-1 text-[12px] text-ink-3" id="recents-label">
-        Recents
-      </div>
-      <div className="quiet-scroll min-h-0 flex-1 overflow-y-auto px-2 pb-2">
-        {!ws.ready ? (
-          <div className="space-y-2 px-2 pt-1" aria-hidden>
-            {[70, 55, 80, 60].map((w) => (
-              <div key={w} className="h-4 rounded-[4px] bg-sunken" style={{ width: `${w}%` }} />
-            ))}
-          </div>
-        ) : list.length === 0 ? (
-          <p className="px-2 py-1 text-[13px] text-ink-3">No investigations yet.</p>
-        ) : (
-          <>
-            {pinned.length > 0 && <RecentGroup label="Pinned" items={pinned} {...{ pathname, onNavigate, setRenaming, setDeleting }} />}
-            {groups.map(({ g, items }) => (
-              <RecentGroup key={g} label={g} items={items} {...{ pathname, onNavigate, setRenaming, setDeleting }} />
-            ))}
-            {list.length > RECENT_LIMIT && (
-              <button
-                type="button"
-                onClick={() => setShowAll((v) => !v)}
-                className="mt-1 h-8 w-full rounded-[6px] px-2 text-left text-[13px] text-ink-2 hover:bg-sunken/70 hover:text-ink"
-              >
-                {showAll ? "Show fewer" : `Show all (${list.length})`}
-              </button>
-            )}
-          </>
-        )}
-      </div>
-      <RenameDialog inv={renaming} onClose={() => setRenaming(null)} />
-      <DeleteDialog inv={deleting} onClose={() => setDeleting(null)} />
-    </div>
-  );
-}
-
-function RecentGroup({
-  label,
-  items,
-  pathname,
-  onNavigate,
-  setRenaming,
-  setDeleting,
-}: {
-  label: string;
-  items: Investigation[];
-  pathname: string;
-  onNavigate?: () => void;
-  setRenaming: (i: Investigation) => void;
-  setDeleting: (i: Investigation) => void;
-}) {
-  return (
-    <section className="mt-2 first:mt-0">
-      <h3 className="px-2 pb-0.5 pt-1 text-[12px] text-ink-3">{label}</h3>
-      <ul>
-        {items.map((inv) => {
-          const href = `/investigations/${inv.id}`;
-          const active = pathname === href;
-          return (
-            <li key={inv.id} className="group/row relative">
-              <Tooltip side="right" content={inv.title}>
-                <Link
-                  href={href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex h-8 items-center gap-2.5 rounded-[6px] pl-2 pr-8 text-[14px] transition-colors duration-150",
-                    active ? "bg-accent-tint font-medium text-accent-text" : "text-ink-2 hover:bg-sunken/70 hover:text-ink",
-                  )}
-                >
-                  <StatusDot status={investigationStatus(inv)} />
-                  <span className="truncate">{inv.title}</span>
-                </Link>
-              </Tooltip>
-              <Menu>
-                <MenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label={`Options for ${inv.title}`}
-                    className="absolute right-1 top-1 grid size-6 place-items-center rounded-[4px] text-ink-3 opacity-0 transition-opacity duration-150 hover:bg-line hover:text-ink focus-visible:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100"
-                  >
-                    <MoreHorizontal className="size-4" strokeWidth={1.5} />
-                  </button>
-                </MenuTrigger>
-                <MenuContent align="start" side="right" label={`Options for ${inv.title}`}>
-                  <MenuItem icon={<Pencil strokeWidth={1.5} />} onSelect={() => setRenaming(inv)}>
-                    Rename
-                  </MenuItem>
-                  <MenuItem
-                    icon={inv.pinned ? <PinOff strokeWidth={1.5} /> : <Pin strokeWidth={1.5} />}
-                    onSelect={() => provider.setPinned(inv.id, !inv.pinned)}
-                  >
-                    {inv.pinned ? "Unpin" : "Pin"}
-                  </MenuItem>
-                  <MenuSeparator />
-                  <MenuItem danger icon={<Trash2 strokeWidth={1.5} />} onSelect={() => setDeleting(inv)}>
-                    Delete
-                  </MenuItem>
-                </MenuContent>
-              </Menu>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }
