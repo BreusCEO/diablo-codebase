@@ -6,13 +6,29 @@ import { SESSION_COOKIE, sessionCookieOptions, signSession, type SessionInput } 
 
 /** Route-handler helpers: cookies, redirects and the same-origin check. */
 
-export function originOf(request: NextRequest): string {
-  return appOrigin(request.nextUrl.origin);
+/**
+ * The origin the visitor actually used, from the (forwarded) Host header, as
+ * Next.js does for Server Actions. `nextUrl.origin` can be the server's own
+ * hostname (e.g. localhost) rather than the one in the address bar.
+ */
+export function requestOrigin(request: NextRequest): string {
+  const host = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || request.headers.get("host");
+  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim() || request.nextUrl.protocol.replace(/:$/, "");
+  if (host && /^[a-z0-9.\-\[\]:]+$/i.test(host) && (proto === "http" || proto === "https")) return `${proto}://${host}`;
+  return request.nextUrl.origin;
 }
 
-/** 303 so a POST becomes a GET on the other side. */
+/** The canonical public origin (APP_ORIGIN), used for the OAuth redirect URI. */
+export function originOf(request: NextRequest): string {
+  return appOrigin(requestOrigin(request));
+}
+
+/**
+ * Redirects stay on the host the visitor is on, where their cookies live.
+ * 303 so a POST becomes a GET on the other side.
+ */
 export function redirectTo(request: NextRequest, path: string, status: 302 | 303 = 303): NextResponse {
-  const res = NextResponse.redirect(new URL(path, originOf(request)), status);
+  const res = NextResponse.redirect(new URL(path, requestOrigin(request)), status);
   res.headers.set("Cache-Control", "no-store");
   return res;
 }
@@ -40,7 +56,7 @@ export function clearSession(res: NextResponse): NextResponse {
 export function isSameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
   if (origin) {
-    return origin === request.nextUrl.origin || origin === originOf(request);
+    return origin === requestOrigin(request) || origin === originOf(request);
   }
   return request.headers.get("sec-fetch-site") === "same-origin";
 }

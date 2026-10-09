@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { authSecret, googleConfig, secureCookies } from "@/lib/auth/env";
 import { authorizationUrl, OAUTH_COOKIE, OAUTH_COOKIE_PATH, OAUTH_TTL_SECONDS, randomToken, sealFlow } from "@/lib/auth/google";
-import { originOf, redirectTo, redirectWithError } from "@/lib/auth/http";
+import { originOf, redirectTo, redirectWithError, requestOrigin } from "@/lib/auth/http";
 import { safeNext } from "@/lib/auth/next-path";
 
 /**
@@ -14,9 +14,16 @@ export async function GET(request: NextRequest) {
   const config = googleConfig();
   if (!config) return redirectWithError(request, "google_unavailable", next);
 
+  // The flow cookie must be set on the host Google will send the visitor back
+  // to, so start over on the canonical origin when APP_ORIGIN differs.
+  const origin = originOf(request);
+  if (origin !== requestOrigin(request)) {
+    return redirectTo(request, `${origin}/api/auth/google?${new URLSearchParams({ next })}`, 302);
+  }
+
   const state = randomToken();
   const verifier = randomToken(48);
-  const url = await authorizationUrl(config, originOf(request), state, verifier);
+  const url = await authorizationUrl(config, origin, state, verifier);
   const res = redirectTo(request, url.toString(), 302);
   res.cookies.set(OAUTH_COOKIE, await sealFlow({ state, verifier, next }, authSecret()), {
     httpOnly: true,
